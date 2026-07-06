@@ -1,5 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from backend.managers.connection_manager import manager
+from managers.connection_manager import manager
 from backend.models import PlayerState
 
 router = APIRouter()
