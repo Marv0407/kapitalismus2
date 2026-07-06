@@ -1,26 +1,9 @@
-<!doctype html>
-<html class="no-js" lang="">
-
+<!DOCTYPE html>
+<html lang="de">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Kapitalismus II</title>
-    <link rel="stylesheet" href="static/css/style.css">
-    <meta name="description" content="">
-
-    <meta property="og:title" content="">
-    <meta property="og:type" content="">
-    <meta property="og:url" content="">
-    <meta property="og:image" content="">
-    <meta property="og:image:alt" content="">
-
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="icon.png">
-
-    <link rel="manifest" href="site.webmanifest">
-    <meta name="theme-color" content="#fafafa">
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incremental Economy - Login & Game</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -28,24 +11,91 @@
             color: #ffffff;
             margin: 20px;
         }
-
         .container {
             max-width: 600px;
             margin: 0 auto;
         }
+        .hidden {
+            display: none !important;
+        }
+        .auth-box {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            margin-top: 50px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #eb720f;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #d6630a;
+        }
+        .btn-secondary {
+            background-color: #444;
+        }
+        .btn-secondary:hover {
+            background-color: #555;
+        }
+        #error-msg {
+            color: #ff4d4d;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
-
 <body>
 
     <div class="container">
-        <h1>Kapitalismus II</h1>
 
-        <resource-display id="economy-ui"></resource-display>
+        <div id="auth-view" class="auth-box">
+            <h2 id="auth-title">Anmelden</h2>
+            <div id="error-msg"></div>
 
-        <button id="sell-btn" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">
-            10 Holz für 5 Gold an NPC verkaufen
-        </button>
+            <div class="form-group">
+                <label for="username">Benutzername</label>
+                <input type="text" id="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Passwort</label>
+                <input type="password" id="password">
+            </div>
+
+            <button id="submit-auth-btn">Einloggen</button>
+            <button id="toggle-auth-btn" class="btn-secondary">Konto erstellen</button>
+        </div>
+
+        <div id="game-view" class="hidden">
+            <h1>Wirtschaftssimulation</h1>
+            <button id="logout-btn" class="btn-secondary" style="float: right;">Ausloggen</button>
+
+            <resource-display id="economy-ui"></resource-display>
+
+            <button id="sell-btn" style="margin-top: 20px;">
+                10 Holz für 5 Gold an NPC verkaufen
+            </button>
+        </div>
     </div>
 
     <script>
@@ -61,6 +111,7 @@
                             padding: 15px;
                             border-radius: 5px;
                             border: 1px solid #333;
+                            margin-top: 20px;
                         }
                         .stat {
                             font-size: 18px;
@@ -83,27 +134,112 @@
         }
         customElements.define('resource-display', ResourceDisplay);
 
-        // Erkennt automatisch, ob das Spiel auf localhost oder der Live-IP läuft
-        const playerId = localStorage.getItem('player_id');
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws?player_id=${playerId}`);
-        const ui = document.getElementById('economy-ui');
+        // UI-Elemente referenzieren
+        const authView = document.getElementById('auth-view');
+        const gameView = document.getElementById('game-view');
+        const authTitle = document.getElementById('auth-title');
+        const errorMsg = document.getElementById('error-msg');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const submitAuthBtn = document.getElementById('submit-auth-btn');
+        const toggleAuthBtn = document.getElementById('toggle-auth-btn');
+        const logoutBtn = document.getElementById('logout-btn');
         const sellBtn = document.getElementById('sell-btn');
+        const ui = document.getElementById('economy-ui');
 
-        ws.onmessage = (event) => {
-            const response = JSON.parse(event.data);
-            if (response.type === 'resource_update') {
-                const { gold, wood } = response.data;
-                ui.updateValues(gold, wood);
-            }
-        };
+        let isLoginMode = true;
+        let ws = null;
 
-        // Interaktion: Holz an den NPC-Markt senden
-        sellBtn.addEventListener('click', () => {
-            ws.send(JSON.stringify({ action: 'sell_wood' }));
+        // Wechseln zwischen Login und Registrierung
+        toggleAuthBtn.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            authTitle.textContent = isLoginMode ? 'Anmelden' : 'Registrieren';
+            submitAuthBtn.textContent = isLoginMode ? 'Einloggen' : 'Konto erstellen';
+            toggleAuthBtn.textContent = isLoginMode ? 'Konto erstellen' : 'Bereits registriert?';
+            errorMsg.textContent = '';
         });
+
+        // Absenden der Auth-Daten an die REST-API
+        submitAuthBtn.addEventListener('click', async () => {
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+            errorMsg.textContent = '';
+
+            if (!username || !password) {
+                errorMsg.textContent = 'Bitte alle Felder ausfüllen.';
+                return;
+            }
+
+            const endpoint = isLoginMode ? '/api/login' : '/api/register';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Etwas ist schiefgelaufen.');
+                }
+
+                // Erfolgreich: ID speichern und Spiel starten
+                localStorage.setItem('player_id', result.player_id);
+                initGame();
+
+            } catch (err) {
+                errorMsg.textContent = err.message;
+            }
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('player_id');
+            if (ws) ws.close();
+            gameView.classList.add('hidden');
+            authView.classList.remove('hidden');
+        });
+
+        // Initialisiert die WebSocket-Verbindung, wenn player_id vorhanden ist
+        function initGame() {
+            const playerId = localStorage.getItem('player_id');
+            if (!playerId) {
+                authView.classList.remove('hidden');
+                gameView.classList.add('hidden');
+                return;
+            }
+
+            authView.classList.add('hidden');
+            gameView.classList.remove('hidden');
+
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Wir hängen die player_id als Query-Parameter an den WebSocket-URL an
+            ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws?player_id=${playerId}`);
+
+            ws.onmessage = (event) => {
+                const response = JSON.parse(event.data);
+                if (response.type === 'resource_update') {
+                    const { gold, wood } = response.data;
+                    ui.updateValues(gold, wood);
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('Verbindung zum Server verloren.');
+            };
+        }
+
+        // Interaktion: Holz verkaufen
+        sellBtn.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'sell_wood' }));
+            }
+        });
+
+        // Beim ersten Laden prüfen, ob noch eine Session aktiv ist
+        initGame();
     </script>
-
 </body>
-
 </html>
