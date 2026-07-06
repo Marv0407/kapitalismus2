@@ -83,8 +83,9 @@
         }
         customElements.define('resource-display', ResourceDisplay);
 
-        // WebSocket-Verbindung aufbauen (localhost für den lokalen Test)
-        const ws = new WebSocket('ws://localhost:8000/ws');
+        // Erkennt automatisch, ob das Spiel auf localhost oder der Live-IP läuft
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
         const ui = document.getElementById('economy-ui');
         const sellBtn = document.getElementById('sell-btn');
 
