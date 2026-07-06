@@ -35,11 +35,18 @@ async def get_index():
 
     return FileResponse(html_path)
 
-if os.path.exists("frontend/src"):
-    app.mount("/src", StaticFiles(directory="frontend/src"), name="src")
-elif os.path.exists("src"):
-    # Fallback, falls der src-Ordner direkt im Hauptverzeichnis liegt
-    app.mount("/src", StaticFiles(directory="src"), name="src")
+# Bestimme das übergeordnete Projektverzeichnis (kapitalismus2)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Mounten des statischen CSS-Verzeichnisses
+static_path = os.path.join(BASE_DIR, "frontend", "static")
+if os.path.exists(static_path):
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+# Mounten des Quellcode-Verzeichnisses für ES6-Module
+src_path = os.path.join(BASE_DIR, "frontend", "src")
+if os.path.exists(src_path):
+    app.mount("/src", StaticFiles(directory=src_path), name="src")
 
 register_tortoise(
     app,
