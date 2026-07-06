@@ -84,8 +84,9 @@
         customElements.define('resource-display', ResourceDisplay);
 
         // Erkennt automatisch, ob das Spiel auf localhost oder der Live-IP läuft
+        const playerId = localStorage.getItem('player_id');
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
+        const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws?player_id=${playerId}`);
         const ui = document.getElementById('economy-ui');
         const sellBtn = document.getElementById('sell-btn');
 
