@@ -48,6 +48,7 @@ DATABASE_CONFIG = {
 connected_players = {}
 
 
+
 async def game_tick_loop():
     while True:
         await asyncio.sleep(5.0)
@@ -59,11 +60,57 @@ async def game_tick_loop():
                     player.gold -= 1
                 await player.save()
 
-                # Nur an diesen spezifischen Spieler senden
                 await send_player_update(player.id, player.gold, player.wood)
+
+            # Nach jedem globalen Tick das Scoreboard für alle aktualisieren
+            await broadcast_scoreboard()
         except Exception as e:
             print(f"Fehler im Game-Loop: {e}")
 
+
+async def broadcast_scoreboard():
+    """
+    Sammelt alle Spieler, sortiert sie nach Gold,
+    prüft den Online-Status und sendet das Scoreboard an ALLE Sockets.
+    """
+    try:
+        # Alle Spieler inklusive zugehörigem User-Objekt laden (für den Namen)
+        players = await PlayerState.all().prefetch_related("user")
+
+        scoreboard_data = []
+        for p in players:
+            scoreboard_data.append({
+                "username": p.user.username,
+                "gold": p.gold,
+                "online": p.id in connected_players
+            })
+
+        # Nach Gold absteigend sortieren
+        scoreboard_data.sort(key=lambda x: x["gold"], reverse=True)
+
+        payload = {
+            "type": "scoreboard_update",
+            "data": scoreboard_data
+        }
+
+        # Broadcast an wirklich jeden verbundenen Socket im System
+        for player_id, sockets in connected_players.items():
+            for ws in sockets:
+                try:
+                    await ws.send_json(payload)
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"Fehler beim Scoreboard-Broadcast: {e}")
+
+async def send_player_update(player_id: int, gold: int, wood: int):
+    if player_id in connected_players:
+        payload = {"type": "resource_update", "data": {"gold": gold, "wood": wood}}
+        for connection in connected_players[player_id]:
+            try:
+                await connection.send_json(payload)
+            except Exception:
+                pass
 
 class AuthModel(BaseModel):
     username: str
@@ -112,13 +159,14 @@ async def get_index():
 async def websocket_endpoint(websocket: WebSocket, player_id: int):
     await websocket.accept()
 
-    # Spieler den aktiven Verbindungen hinzufügen
     if player_id not in connected_players:
         connected_players[player_id] = []
     connected_players[player_id].append(websocket)
 
+    # Sobald jemand joint, aktualisiert sich für alle der Online-Status
+    await broadcast_scoreboard()
+
     try:
-        # Aktuellen Zustand des spezifischen Spielers laden
         player = await PlayerState.get(id=player_id)
         await websocket.send_json({
             "type": "resource_update",
@@ -134,13 +182,16 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                     p_state.gold += 5
                     await p_state.save()
 
-                    # Sofortiges visuelles Update an alle Sockets dieses Spielers
                     await send_player_update(player_id, p_state.gold, p_state.wood)
+                    # Direkt nach einem Handel das Scoreboard live updaten
+                    await broadcast_scoreboard()
 
     except WebSocketDisconnect:
         connected_players[player_id].remove(websocket)
         if not connected_players[player_id]:
             del connected_players[player_id]
+        # Wenn jemand geht, Scoreboard aktualisieren
+        await broadcast_scoreboard()
     except Exception as e:
         print(f"Fehler im WebSocket für Spieler {player_id}: {e}")
 
