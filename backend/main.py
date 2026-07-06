@@ -22,10 +22,17 @@ async def startup_event():
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
 @app.get("/")
 async def get_index():
     """Liefert die Einstiegsseite aus."""
-    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+    # Wechselt vom backend-Ordner eine Ebene nach oben und geht in den frontend-Ordner
+    html_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
+
+    # Fallback, falls lokal gearbeitet wird und die Struktur flach ist
+    if not os.path.exists(html_path):
+        html_path = os.path.join(os.path.dirname(__file__), "index.html")
+
     return FileResponse(html_path)
 
 if os.path.exists("frontend/src"):
