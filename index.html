@@ -1,0 +1,107 @@
+<!doctype html>
+<html class="no-js" lang="">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kapitalismus2</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <meta name="description" content="">
+
+    <meta property="og:title" content="">
+    <meta property="og:type" content="">
+    <meta property="og:url" content="">
+    <meta property="og:image" content="">
+    <meta property="og:image:alt" content="">
+
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <link rel="manifest" href="site.webmanifest">
+    <meta name="theme-color" content="#fafafa">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Kapitalismus 2</h1>
+
+        <resource-display id="economy-ui"></resource-display>
+
+        <button id="sell-btn" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">
+            10 Holz für 5 Gold an NPC verkaufen
+        </button>
+    </div>
+
+    <script>
+        // Definition der Web Component für die Ressourcen-Anzeige
+        class ResourceDisplay extends HTMLElement {
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });
+                this.shadowRoot.innerHTML = `
+                    <style>
+                        .panel {
+                            background: #2a2a2a;
+                            padding: 15px;
+                            border-radius: 5px;
+                            border: 1px solid #333;
+                        }
+                        .stat {
+                            font-size: 18px;
+                            margin: 5px 0;
+                        }
+                        .gold { color: #ffd700; }
+                        .wood { color: #deb887; }
+                    </style>
+                    <div class="panel">
+                        <div class="stat">Gold: <span class="gold" id="gold-val">0</span></div>
+                        <div class="stat">Holz: <span class="wood" id="wood-val">0</span></div>
+                    </div>
+                `;
+            }
+
+            updateValues(gold, wood) {
+                this.shadowRoot.getElementById('gold-val').textContent = gold;
+                this.shadowRoot.getElementById('wood-val').textContent = wood;
+            }
+        }
+        customElements.define('resource-display', ResourceDisplay);
+
+        // WebSocket-Verbindung aufbauen (localhost für den lokalen Test)
+        const ws = new WebSocket('ws://localhost:8000/ws');
+        const ui = document.getElementById('economy-ui');
+        const sellBtn = document.getElementById('sell-btn');
+
+        ws.onmessage = (event) => {
+            const response = JSON.parse(event.data);
+            if (response.type === 'resource_update') {
+                const { gold, wood } = response.data;
+                ui.updateValues(gold, wood);
+            }
+        };
+
+        // Interaktion: Holz an den NPC-Markt senden
+        sellBtn.addEventListener('click', () => {
+            ws.send(JSON.stringify({ action: 'sell_wood' }));
+        });
+    </script>
+
+</body>
+
+</html>
