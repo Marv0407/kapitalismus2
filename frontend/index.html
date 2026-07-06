@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incremental Economy - Scoreboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            margin: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .auth-box {
+            max-width: 600px;
+            margin: 50px auto 0 auto;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #eb720f;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #d6630a;
+        }
+        .btn-secondary {
+            background-color: #444;
+        }
+        .btn-secondary:hover {
+            background-color: #555;
+        }
+        #error-msg {
+            color: #ff4d4d;
+            margin-bottom: 15px;
+        }
+
+        /* Das Layout-Grid für die Spiel-Ansicht */
+        .game-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <div id="auth-view" class="auth-box">
+            <h2 id="auth-title">Anmelden</h2>
+            <div id="error-msg"></div>
+            <div class="form-group">
+                <label for="username">Benutzername</label>
+                <input type="text" id="username">
+            </div>
+            <div class="form-group">
+                <label for="password">Passwort</label>
+                <input type="password" id="password">
+            </div>
+            <button id="submit-auth-btn">Einloggen</button>
+            <button id="toggle-auth-btn" class="btn-secondary">Konto erstellen</button>
+        </div>
+
+        <div id="game-view" class="hidden">
+            <div style="overflow: hidden;">
+                <h1 style="float: left; margin: 0;">Wirtschaftssimulation</h1>
+                <button id="logout-btn" class="btn-secondary" style="float: right;">Ausloggen</button>
+            </div>
+
+            <div class="game-layout">
+                <div>
+                    <resource-display id="economy-ui"></resource-display>
+                    <button id="sell-btn" style="margin-top: 20px;">
+                        10 Holz für 5 Gold an NPC verkaufen
+                    </button>
+                </div>
+
+                <div>
+                    <score-board id="scoreboard-ui"></score-board>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   <script type="module" src="./src/main.js"></script>
+</body>
+</html>
