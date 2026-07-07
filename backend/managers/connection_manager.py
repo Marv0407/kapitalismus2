@@ -1,6 +1,6 @@
 from fastapi import WebSocket
 # models! nicht backend.models, weil sonst der pfad ins Leere geht beim server start :P
-from models import PlayerState, Region
+from models import PlayerState, Region, WorldHex
 
 
 class ConnectionManager:
@@ -80,5 +80,26 @@ class ConnectionManager:
                 except Exception:
                     pass
 
+    async def send_overworld_map(self, player_id: int):
+        """Lädt alle Weltkarte-Hexfelder und sendet diese an den Vlient."""
+        if player_id in self.active_connections:
+            hexes = await WorldHex.all().prefetch_related("owner")
+
+            map_data = []
+            for h in hexes:
+                map_data.append({
+                    "id": h.id,
+                    "q": h.q,
+                    "r": h.r,
+                    "terrain": h.terrain,
+                    "owner_id": h.owner.id if h.owner else None
+                })
+
+            payload = {"type": "overworld_update", "data": map_data}
+            for connection in self.active_connections[player_id]:
+                try:
+                    await connection.send_json(payload)
+                except Exception:
+                    pass
 
 manager = ConnectionManager()

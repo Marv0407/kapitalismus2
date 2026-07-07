@@ -1,20 +1,24 @@
 import { ResourceDisplay } from './components/ResourceDisplay.js';
 import { ScoreBoard } from './components/ScoreBoard.js';
 import { SectorGrid } from './components/SectorGrid.js';
-import { connectWebSocket, disconnectWebSocket, sellWoodAction } from './services/socketManager.js';
+import { connectWebSocket, disconnectWebSocket, sellWoodAction, claimHexAction } from './services/socketManager.js';
 import { registerUser, loginUser } from './services/api.js';
+import {OverworldMap} from "./components/OverworldMap";
 
 customElements.define('resource-display', ResourceDisplay);
 customElements.define('score-board', ScoreBoard);
 customElements.define('sector-grid', SectorGrid);
+customElements.define('overworld-map', OverworldMap);
 
 document.addEventListener('DOMContentLoaded', () => {
     // UI-Elemente für das Spiel
-    const ui = document.getElementById('economy-ui');
+
     const scoreboardUi = document.getElementById('scoreboard-ui');
-    const mapUi = document.getElementById('map-ui');
+
     const sellBtn = document.getElementById('sell-btn');
     const logoutBtn = document.getElementById('logout-btn');
+
+    const gameLayoutLeft = document.getElementById('game-layout-left');
 
     // UI-Elemente für die Authentifizierung
     const authTitle = document.getElementById('auth-title');
@@ -39,11 +43,33 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('auth-view').classList.add('hidden');
         document.getElementById('game-view').classList.remove('hidden');
 
+        gameLayoutLeft.innerHTML = `
+            <resource-display id="economy-ui"></resource-display>
+            <overworld-map id="overworld-ui"></overworld-map>
+            <sector-grid id="map-ui" class="hidden"></sector-grid>
+            <button id="sell-btn" style="margin-top: 20px;">10 Holz für 5 Gold an NPC verkaufen</button>
+        `;
+
+        const ui = document.getElementById("economy-ui")
+        const overworldUi = document.getElementById("overworld-ui")
+        const mapUi = document.getElementById('map-ui');
+
+
         connectWebSocket(
             playerId,
             (gold, wood) => ui.updateValues(gold, wood),
             (data) => scoreboardUi.renderData(data),
-            (mapData) => mapUi.renderMap(mapData)
+            (mapData) => {
+                // Wenn lokale Sektoren existieren, blende die Overworld aus und die Stadtkarte ein
+                if (mapData.length > 0) {
+                    overworldUi.classList.add('hidden');
+                    mapUi.classList.remove('hidden');
+                    mapUi.renderMap(mapData);
+                }
+            },
+            (overworldData) => {
+                overworldUi.renderOverworld(overworldData, playerId, claimHexAction);
+            }
         );
     }
 

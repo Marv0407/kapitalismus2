@@ -1,6 +1,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from managers.connection_manager import manager
-from models import PlayerState
+from models import PlayerState, WorldHex
+from world_generator import generate_local_sectors
 
 router = APIRouter()
 
@@ -10,6 +11,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
     """Verwaltet den Lebenszyklus und die eingehenden Nachrichten einer WebSocket-Verbindung."""
     await manager.connect(websocket, player_id)
     await manager.broadcast_scoreboard()
+    await manager.send_overworld_map(player_id)
     await manager.send_map_update(player_id)
 
     try:
@@ -21,7 +23,9 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
 
         while True:
             data = await websocket.receive_json()
-            if data.get("action") == "sell_wood":
+            action = data.get("action")
+
+            if action == "sell_wood":
                 p_state = await PlayerState.select_for_update().get(id=player_id)
                 if p_state.wood >= 10:
                     p_state.wood -= 10
@@ -30,6 +34,21 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
 
                     await manager.send_personal_update(player_id, p_state.gold, p_state.wood)
                     await manager.broadcast_scoreboard()
+
+            elif action == "claim_hex":
+                q = data.get("q")
+                r = data.get("r")
+                hex_field = await WorldHex.get_or_none(q=q, r=r, owner_id__isnull=True)
+
+                if hex_field:
+                    p_state = await PlayerState.get(id=player_id)
+                    hex_field.owner = p_state
+                    await hex_field.save()
+
+                    await generate_local_sectors(p_state, hex_field.terrain)
+
+                    await manager.send_overworld_map(player_id)
+                    await manager.send_map_update(player_id)
 
     except WebSocketDisconnect:
         manager.disconnect(websocket, player_id)

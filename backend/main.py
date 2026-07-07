@@ -8,6 +8,7 @@ from tortoise.contrib.fastapi import register_tortoise
 from database import DATABASE_CONFIG
 from routers import auth, websocket
 from game_loop import game_tick_loop
+from world_generator import generate_world_if_empty
 
 app = FastAPI()
 
@@ -17,6 +18,8 @@ app.include_router(websocket.router)
 @app.on_event("startup")
 async def startup_event():
     """Startet asynchrone Hintergrundprozesse bei Serverstart."""
+    await asyncio.sleep(1)
+    await generate_world_if_empty(radius=5)
     asyncio.create_task(game_tick_loop())
 
 if os.path.exists("static"):

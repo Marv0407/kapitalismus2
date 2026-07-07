@@ -20,12 +20,7 @@ async def register(data: AuthModel):
     user = await User.create(username=data.username, password_hash=data.password)
     player = await PlayerState.create(user=user, gold=100, wood=0)
 
-    region = await Region.create(coordinates_x=0, coordinates_y=0, region_type="Küste", player=player)
-    await PlayerBuilding.create(player=player, region=region, building_type="holzfaeller", level=1,
-                                data={"efficiency": 1.0})
-
     return {"status": "success", "player_id": player.id}
-
 
 @router.post("/login")
 async def login(data: AuthModel):

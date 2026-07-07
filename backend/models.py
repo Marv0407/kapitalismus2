@@ -39,3 +39,13 @@ class PlayerBuilding(models.Model):
 
     class Meta:
         table = "player_buildings"
+
+class WorldHex(models.Model):
+    id = fields.IntField(pk=True)
+    q = fields.IntField() # Hex-Koord (Spalte)
+    r = fields.IntField() # hex-koord (Reihe)
+    terrain = fields.CharField(max_length=50)
+    owner = fields.ForeignKeyField("models.PlayerState", related_name="owned_hexes", null=True)
+
+    class Meta:
+        table = "world_hexes"

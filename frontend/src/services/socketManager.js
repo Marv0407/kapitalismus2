@@ -14,6 +14,8 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
             onScoreboardUpdate(response.data);
         } else if (response.type === 'map_update') {
             onMapUpdate(response.data);
+        } else if (response.type === 'overworld_update') {
+            onOverworldUpdate(response.data);
         }
     };
 
@@ -34,5 +36,11 @@ export function sellWoodAction() {
     /* Sendet die Anforderung zum Holzverkauf an den Server. */
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: 'sell_wood' }));
+    }
+}
+
+export function claimHexAction(q, r) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'claim_hex', q: q, r: r}))
     }
 }
