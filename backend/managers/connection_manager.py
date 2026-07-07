@@ -70,7 +70,6 @@ class ConnectionManager:
                     "type": r.region_type,
                     "building": building.building_type if building else None,
                     "level": building.level if building else 0,
-                    "modules": building.modules if building else None
                     # Module wie gebäudeverbesserungen, slots werden mit level freigeschaltet oderso
                 })
 
