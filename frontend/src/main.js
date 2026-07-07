@@ -3,7 +3,7 @@ import { ScoreBoard } from './components/ScoreBoard.js';
 import { SectorGrid } from './components/SectorGrid.js';
 import { connectWebSocket, disconnectWebSocket, sellWoodAction, claimHexAction } from './services/socketManager.js';
 import { registerUser, loginUser } from './services/api.js';
-import {OverworldMap} from "./components/OverworldMap.js";
+import { OverworldMap } from "./components/OverworldMap.js";
 
 customElements.define('resource-display', ResourceDisplay);
 customElements.define('score-board', ScoreBoard);
@@ -11,16 +11,10 @@ customElements.define('sector-grid', SectorGrid);
 customElements.define('overworld-map', OverworldMap);
 
 document.addEventListener('DOMContentLoaded', () => {
-    // UI-Elemente für das Spiel
-
     const scoreboardUi = document.getElementById('scoreboard-ui');
-
-    //const sellBtn = document.getElementById('sell-btn');
     const logoutBtn = document.getElementById('logout-btn');
-
     const gameLayoutLeft = document.getElementById('game-layout-left');
 
-    // UI-Elemente für die Authentifizierung
     const authTitle = document.getElementById('auth-title');
     const errorMsg = document.getElementById('error-msg');
     const usernameInput = document.getElementById('username');
@@ -28,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitAuthBtn = document.getElementById('submit-auth-btn');
     const toggleAuthBtn = document.getElementById('toggle-auth-btn');
 
-    // Statusvariable für den Authentifizierungsmodus
     let isLoginMode = true;
 
     function initGameSession() {
@@ -50,10 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
             <button id="sell-btn" style="margin-top: 20px;">10 Holz für 5 Gold an NPC verkaufen</button>
         `;
 
-        const ui = document.getElementById("economy-ui")
-        const overworldUi = document.getElementById("overworld-ui")
+        const ui = document.getElementById("economy-ui");
+        const overworldUi = document.getElementById("overworld-ui");
         const mapUi = document.getElementById('map-ui');
 
+        /* Bindet den Klick-Event-Listener an den dynamisch neu erstellten Button */
         document.getElementById('sell-btn').addEventListener('click', sellWoodAction);
 
         connectWebSocket(
@@ -61,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
             (gold, wood) => ui.updateValues(gold, wood),
             (data) => scoreboardUi.renderData(data),
             (mapData) => {
-                // Wenn lokale Sektoren existieren, blende die Overworld aus und die Stadtkarte ein
                 if (mapData.length > 0) {
                     overworldUi.classList.add('hidden');
                     mapUi.classList.remove('hidden');
@@ -74,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
-    // Wechsel zwischen Login- und Registrierungsmodus
     toggleAuthBtn.addEventListener('click', () => {
         isLoginMode = !isLoginMode;
         authTitle.textContent = isLoginMode ? 'Anmelden' : 'Registrieren';
@@ -83,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMsg.textContent = '';
     });
 
-    // Absenden der Authentifizierungsdaten
     submitAuthBtn.addEventListener('click', async () => {
         const username = usernameInput.value.trim();
         const password = passwordInput.value;
@@ -108,8 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
             errorMsg.textContent = err.message;
         }
     });
-
-    //sellBtn.addEventListener('click', sellWoodAction);
 
     logoutBtn.addEventListener('click', () => {
         localStorage.removeItem('player_id');
