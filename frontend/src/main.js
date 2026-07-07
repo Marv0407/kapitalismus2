@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const scoreboardUi = document.getElementById('scoreboard-ui');
 
-    const sellBtn = document.getElementById('sell-btn');
+    //const sellBtn = document.getElementById('sell-btn');
     const logoutBtn = document.getElementById('logout-btn');
 
     const gameLayoutLeft = document.getElementById('game-layout-left');
@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const overworldUi = document.getElementById("overworld-ui")
         const mapUi = document.getElementById('map-ui');
 
+        document.getElementById('sell-btn').addEventListener('click', sellWoodAction);
 
         connectWebSocket(
             playerId,
@@ -108,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    sellBtn.addEventListener('click', sellWoodAction);
+    //sellBtn.addEventListener('click', sellWoodAction);
 
     logoutBtn.addEventListener('click', () => {
         localStorage.removeItem('player_id');
