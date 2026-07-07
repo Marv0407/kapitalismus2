@@ -3,7 +3,7 @@ import { ScoreBoard } from './components/ScoreBoard.js';
 import { SectorGrid } from './components/SectorGrid.js';
 import { connectWebSocket, disconnectWebSocket, sellWoodAction, claimHexAction } from './services/socketManager.js';
 import { registerUser, loginUser } from './services/api.js';
-import {OverworldMap} from "./components/OverworldMap";
+import {OverworldMap} from "./components/OverworldMap.js";
 
 customElements.define('resource-display', ResourceDisplay);
 customElements.define('score-board', ScoreBoard);
