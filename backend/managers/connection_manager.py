@@ -1,5 +1,6 @@
 from fastapi import WebSocket
-from models import PlayerState
+# models! nicht backend.models, weil sonst der pfad ins Leere geht beim server start :P
+from models import PlayerState, Region
 
 
 class ConnectionManager:
@@ -54,6 +55,31 @@ class ConnectionManager:
                         pass
         except Exception as e:
             print(f"Fehler beim Scoreboard-Broadcast: {e}")
+
+    async def send_map_update(self,player_id: int):
+        """Lädt alle Sektoren und Gebäude eines SPielers und sendet diese an den Client"""
+        if player_id in self.active_connections:
+            regions = await Region.filter(player_id=player_id).prefetch_related("buildings")
+
+            map_data = []
+            for r in regions:
+                building = r.buildings[0] if r.buildings else None
+                map_data.append({
+                    "x": r.coordinates_x,
+                    "y": r.coordinates_y,
+                    "type": r.region_type,
+                    "building": building.building_type if building else None,
+                    "level": building.level if building else 0,
+                    "modules": building.modules if building else None
+                    # Module wie gebäudeverbesserungen, slots werden mit level freigeschaltet oderso
+                })
+
+            payload = {"type": "map_update", "data": map_data}
+            for connection in self.active_connections[player_id]:
+                try:
+                    await connection.send_json(payload)
+                except Exception:
+                    pass
 
 
 manager = ConnectionManager()

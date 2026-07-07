@@ -1,15 +1,18 @@
 import { ResourceDisplay } from './components/ResourceDisplay.js';
 import { ScoreBoard } from './components/ScoreBoard.js';
+import { SectorGrid } from './components/SectorGrid.js';
 import { connectWebSocket, disconnectWebSocket, sellWoodAction } from './services/socketManager.js';
 import { registerUser, loginUser } from './services/api.js';
 
 customElements.define('resource-display', ResourceDisplay);
 customElements.define('score-board', ScoreBoard);
+customElements.define('sector-grid', SectorGrid);
 
 document.addEventListener('DOMContentLoaded', () => {
     // UI-Elemente für das Spiel
     const ui = document.getElementById('economy-ui');
     const scoreboardUi = document.getElementById('scoreboard-ui');
+    const mapUi = document.getElementById('map-ui');
     const sellBtn = document.getElementById('sell-btn');
     const logoutBtn = document.getElementById('logout-btn');
 
@@ -39,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         connectWebSocket(
             playerId,
             (gold, wood) => ui.updateValues(gold, wood),
-            (data) => scoreboardUi.renderData(data)
+            (data) => scoreboardUi.renderData(data),
+            (mapData) => mapUi.renderMap(mapData)
         );
     }
 

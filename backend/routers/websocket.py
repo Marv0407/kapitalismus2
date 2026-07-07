@@ -10,6 +10,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
     """Verwaltet den Lebenszyklus und die eingehenden Nachrichten einer WebSocket-Verbindung."""
     await manager.connect(websocket, player_id)
     await manager.broadcast_scoreboard()
+    await manager.send_map_update(player_id)
 
     try:
         player = await PlayerState.get(id=player_id)

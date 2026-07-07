@@ -1,6 +1,6 @@
 let ws = null;
 
-export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate) {
+export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate, onMapUpdate) {
     /* Baut die WebSocket-Verbindung auf und registriert die Callback-Funktionen für eingehende Nachrichten. */
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws?player_id=${playerId}`);
@@ -12,6 +12,8 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate)
             onResourceUpdate(response.data.gold, response.data.wood);
         } else if (response.type === 'scoreboard_update') {
             onScoreboardUpdate(response.data);
+        } else if (response.type === 'map_update') {
+            onMapUpdate(response.data);
         }
     };
 
