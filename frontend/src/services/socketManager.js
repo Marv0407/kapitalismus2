@@ -1,6 +1,6 @@
 let ws = null;
 
-export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate, onMapUpdate) {
+export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate, onMapUpdate, onOverworldUpdate) {
     /* Baut die WebSocket-Verbindung auf und registriert die Callback-Funktionen für eingehende Nachrichten. */
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws?player_id=${playerId}`);

@@ -47,7 +47,7 @@ export class OverworldMap extends HTMLElement {
         const offsetY = 400;
 
         hexData.forEach(hex => {
-            const cx = offsetX + this.hexSize * Math.sqrt(3) * (hex.q + hex.r /20);
+            const cx = offsetX + this.hexSize * Math.sqrt(3) * (hex.q + hex.r /2);
             const cy = offsetY + this.hexSize * 3 / 2 * hex.r;
 
             const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon")
@@ -57,7 +57,7 @@ export class OverworldMap extends HTMLElement {
             if (hex.owner_id === parseInt(currentPlayerId)) {
                 polygon.classList.add("owned-by-me");
             } else if (hex.owner_id !== null) {
-                polygon.classList.add("owner")
+                polygon.classList.add("owned")
             }
 
             polygon.addEventListener("click", () => {
