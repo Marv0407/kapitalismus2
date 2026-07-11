@@ -64,7 +64,10 @@ async def game_tick_loop():
 
                 # 1. Automatischer Export der Spieler
                 for player in players:
-                    p_state = await PlayerState.select_for_update().get(id=player.id)
+                    # Lade den PlayerState neu, um sicherzustellen, dass wir die neuesten
+                    # Export-Einstellungen haben, die seit Beginn des Ticks geändert worden sein könnten.
+                    p_state = await PlayerState.get(id=player.id)
+
                     export_settings = p_state.export_settings if isinstance(p_state.export_settings, dict) else {}
 
                     player_updated = False
