@@ -109,9 +109,10 @@ class ConnectionManager:
                     pass
 
     async def send_overworld_map(self, player_id: int):
-        """Lädt alle Weltkarte-Hexfelder und sendet diese an den Vlient."""
+        """Lädt alle Weltkarte-Hexfelder und sendet diese an den Client."""
         if player_id in self.active_connections:
-            hexes = await WorldHex.all().prefetch_related("owner")
+            # WICHTIG: Hier "owner__user" prefetcht, damit die User-Daten geladen werden
+            hexes = await WorldHex.all().prefetch_related("owner__user")
 
             map_data = []
             for h in hexes:
@@ -121,7 +122,8 @@ class ConnectionManager:
                     "r": h.r,
                     "terrain": h.terrain,
                     "owner_id": h.owner.id if h.owner else None,
-                    "owner_name": h.owner.user.username if h.owner else None,
+                    # Jetzt kann h.owner.user sicher zugegriffen werden
+                    "owner_name": h.owner.user.username if (h.owner and h.owner.user) else None,
                     "owner_color": h.owner.color if h.owner else None
                 })
 
