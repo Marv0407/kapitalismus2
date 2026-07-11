@@ -63,6 +63,24 @@ async def game_tick_loop():
                 market_dict = {m.resource_type: m for m in markets}
                 prices_changed = False
 
+                # Failsafe: Falls die Datenbank leer ist, Markt sofort aufbauen
+                if not markets:
+                    print("[DEBUG - LOOP] Markt ist leer! Initialisiere Standardpreise...")
+                    resources = [
+                        "wood", "stone", "coal", "iron_ore", "iron", "steel",
+                        "seed", "fruit", "vegetable", "livestock", "meat", "grain", "bread",
+                        "wool", "cotton", "fabric", "clothes"
+                    ]
+                    price_list = []
+                    for res in resources:
+                        price_list.append(MarketPrice(resource_type=res, base_price=4.0, current_price=4.0, stock=1000))
+                    await MarketPrice.bulk_create(price_list)
+                    # Märkte direkt nach Erstellung neu laden
+                    markets = await MarketPrice.all()
+
+                market_dict = {m.resource_type: m for m in markets}
+                prices_changed = False
+
                 # 1. Automatischer Export der Spieler
                 for player in players:
                     # Lade den PlayerState neu, um sicherzustellen, dass wir die neuesten
