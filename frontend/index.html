@@ -14,67 +14,178 @@
     <meta property="og:image:alt" content="">
     <link rel="icon" href="./static/favicon/favicon.ico" sizes="any">
 
-<style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        .hidden { display: none !important; }
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .hidden {
+            display: none !important;
+        }
 
         /* Auth View */
-        .auth-box { max-width: 400px; margin: 100px auto; background: #2a2a2a; padding: 20px; border-radius: 5px; border: 1px solid #333; }
-        .form-group { margin-bottom: 15px; }
-        .form-group input { width: 100%; padding: 8px; background: #1a1a1a; border: 1px solid #444; color: #fff; box-sizing: border-box; }
-        button { padding: 10px; cursor: pointer; background-color: #eb720f; border: none; color: white; border-radius: 4px; font-weight: bold; width: 100%; margin-bottom: 10px; }
-        button:hover { background-color: #d6630a; }
+        .auth-box {
+            max-width: 400px;
+            margin: 100px auto;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            color: #fff;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #eb720f;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #d6630a;
+        }
 
         /* Game View Layout */
-        #game-view { display: flex; flex-direction: column; height: 100%; width: 100%; }
-        #top-bar-container { height: 60px; background-color: #111; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 20px; z-index: 10; }
+        #game-view {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
 
-        .main-workspace { display: flex; flex: 1; overflow: hidden; }
-        #left-panel-container { width: 250px; background-color: #222; border-right: 1px solid #333; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
-        #content-area { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+        #top-bar-container {
+            height: 60px;
+            background-color: #111;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 10;
+        }
+
+        .main-workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #left-panel-container {
+            width: 250px;
+            background-color: #222;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #content-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            position: relative;
+        }
 
         /* Action Buttons */
-        .action-btn { background-color: #4CAF50; margin-top: 5px; }
-        .action-btn:hover { background-color: #45a049; }
+        .action-btn {
+            background-color: #4CAF50;
+            margin-top: 5px;
+        }
+
+        .action-btn:hover {
+            background-color: #45a049;
+        }
     </style>
 </head>
 <body>
 
-    <div id="auth-view" class="auth-box">
-        <h2 id="auth-title">Anmelden</h2>
-        <div id="error-msg" style="color: #ff4d4d; margin-bottom: 15px;"></div>
-        <div class="form-group"><input type="text" id="username" placeholder="Benutzername"></div>
-        <div class="form-group"><input type="password" id="password" placeholder="Passwort"></div>
-        <button id="submit-auth-btn">Einloggen</button>
-        <button id="toggle-auth-btn" style="background-color: #444;">Konto erstellen</button>
+<div id="auth-view" class="auth-box">
+    <h2 id="auth-title">Anmelden</h2>
+    <div id="error-msg" style="color: #ff4d4d; margin-bottom: 15px;"></div>
+    <div class="form-group"><input type="text" id="username" placeholder="Benutzername"></div>
+    <div class="form-group"><input type="password" id="password" placeholder="Passwort"></div>
+    <button id="submit-auth-btn">Einloggen</button>
+    <button id="toggle-auth-btn" style="background-color: #444;">Konto erstellen</button>
+</div>
+
+<div id="game-view" class="hidden">
+    <div id="top-bar-container">
+        <top-bar id="top-bar-ui"></top-bar>
     </div>
 
-    <div id="game-view" class="hidden">
-        <div id="top-bar-container">
-            <top-bar id="top-bar-ui"></top-bar>
+    <div class="main-workspace">
+        <div id="left-panel-container">
+            <player-info id="player-info-ui"></player-info>
+
+            <h4 style="border-bottom: 1px solid #444; padding-bottom: 5px; margin-top: 30px;">Navigation</h4>
+            <button id="world-btn" style="background-color: #3498db;">Weltkarte</button>
+
+            <h4 style="border-bottom: 1px solid #444; padding-bottom: 5px; margin-top: 20px;">Manuelle Arbeit</h4>
+            <button class="action-btn" id="gather-wood-btn">Holz hacken</button>
+            <button class="action-btn" id="gather-stone-btn" style="background-color: #7f8c8d;">Stein klopfen</button>
+
+            <button id="logout-btn" style="background-color: #c0392b; margin-top: auto;">Ausloggen</button>
+
+            <!-- Dev Tools Sektion in der Sidebar -->
+            <div id="dev-tools-panel"
+                 style="margin-top: 20px; padding: 10px; background: #2c3e50; border: 1px solid #34495e; border-radius: 4px;">
+                <h4 style="margin: 0 0 10px 0; color: #e74c3c; font-family: monospace;">🛠️ DevTools</h4>
+
+                <button id="dev-cheat-btn" style="background-color: #e67e22; font-size: 11px; padding: 5px;">Ressourcen
+                    +100 / Gold +5000
+                </button>
+
+                <div style="margin-top: 10px;">
+                    <label style="font-size: 11px; font-family: monospace; display: block; margin-bottom: 3px;">Live
+                        Python Code:</label>
+                    <textarea id="dev-code-input"
+                              style="width: 100%; height: 60px; background: #1a1a1a; color: #2ecc71; border: 1px solid #444; font-family: monospace; font-size: 11px; box-sizing: border-box; resize: vertical;"
+                              placeholder="p_state = await PlayerState.get(id=player_id)"></textarea>
+                    <button id="dev-run-code-btn"
+                            style="background-color: #2ecc71; font-size: 11px; padding: 5px; margin-top: 5px;">Code auf
+                        Server ausführen
+                    </button>
+                </div>
+
+                <div id="dev-console-log"
+                     style="margin-top: 10px; padding: 5px; background: #111; border: 1px solid #333; font-family: monospace; font-size: 10px; max-height: 80px; overflow-y: auto; color: #bbb;">
+                    Konsole bereit...
+                </div>
+            </div>
         </div>
 
-        <div class="main-workspace">
-            <div id="left-panel-container">
-                <player-info id="player-info-ui"></player-info>
-
-                <h4 style="border-bottom: 1px solid #444; padding-bottom: 5px; margin-top: 30px;">Navigation</h4>
-                <button id="world-btn" style="background-color: #3498db;">Weltkarte</button>
-
-                <h4 style="border-bottom: 1px solid #444; padding-bottom: 5px; margin-top: 20px;">Manuelle Arbeit</h4>
-                <button class="action-btn" id="gather-wood-btn">Holz hacken</button>
-                <button class="action-btn" id="gather-stone-btn" style="background-color: #7f8c8d;">Stein klopfen</button>
-
-                <button id="logout-btn" style="background-color: #c0392b; margin-top: auto;">Ausloggen</button>
-            </div>
-
-            <div id="content-area">
-                <overworld-map id="overworld-ui"></overworld-map>
-                <sector-grid id="map-ui" class="hidden"></sector-grid>
-            </div>
+        <div id="content-area">
+            <overworld-map id="overworld-ui"></overworld-map>
+            <sector-grid id="map-ui" class="hidden"></sector-grid>
         </div>
     </div>
+</div>
 
-    <script type="module" src="./src/main.js"></script>
+<script type="module" src="./src/main.js"></script>
 </body>
 </html>

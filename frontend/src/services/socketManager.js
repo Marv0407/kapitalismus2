@@ -19,6 +19,13 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
         } else if (response.type === 'error') {
             alert(response.message);
         }
+        else if (response.type === 'dev_console_output') {
+            const consoleLog = document.getElementById('dev-console-log');
+            if (consoleLog) {
+                consoleLog.textContent = response.data.message;
+                consoleLog.scrollTop = consoleLog.scrollHeight; // Automatisch nach unten scrollen
+            }
+        }
     };
 
     ws.onclose = (event) => {
@@ -49,6 +56,7 @@ export function gatherManualAction(resourceType) {
         ws.send(JSON.stringify({ action: 'gather_manual', resource: resourceType }));
     }
 }
+
 
 export function claimHexAction(q, r) {
     if (ws && ws.readyState === WebSocket.OPEN) {

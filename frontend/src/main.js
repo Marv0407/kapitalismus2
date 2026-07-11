@@ -1,10 +1,15 @@
-import { TopBar } from './components/TopBar.js';
-import { PlayerInfo } from './components/PlayerInfo.js';
-import { ScoreBoard } from './components/ScoreBoard.js'; // (Optional später in die UI einbauen)
-import { SectorGrid } from './components/SectorGrid.js';
-import { OverworldMap } from "./components/OverworldMap.js";
-import { connectWebSocket, disconnectWebSocket, gatherManualAction, claimHexAction, assignWorkersAction } from './services/socketManager.js';
-import { registerUser, loginUser } from './services/api.js';
+import {TopBar} from './components/TopBar.js';
+import {PlayerInfo} from './components/PlayerInfo.js';
+import {SectorGrid} from './components/SectorGrid.js';
+import {OverworldMap} from "./components/OverworldMap.js";
+import {
+    assignWorkersAction,
+    claimHexAction,
+    connectWebSocket,
+    disconnectWebSocket,
+    gatherManualAction
+} from './services/socketManager.js';
+import {loginUser, registerUser} from './services/api.js';
 
 customElements.define('top-bar', TopBar);
 customElements.define('player-info', PlayerInfo);
@@ -27,7 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initGameSession() {
         const playerId = localStorage.getItem('player_id');
-        if (!playerId) { return; }
+        if (!playerId) {
+            return;
+        }
 
         document.getElementById('auth-view').classList.add('hidden');
         document.getElementById('game-view').classList.remove('hidden');
@@ -61,17 +68,32 @@ document.addEventListener('DOMContentLoaded', () => {
             location.reload();
         });
 
+        // Listener für DevTools
+        document.getElementById('dev-cheat-btn').addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({action: 'dev_cheat_resources'}));
+            }
+        });
+
+        document.getElementById('dev-run-code-btn').addEventListener('click', () => {
+            const code = document.getElementById('dev-code-input').value;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({action: 'dev_execute_code', code: code}));
+            }
+        });
+
         connectWebSocket(
             playerId,
             (resourceData) => {
                 topBarUi.updateResources(resourceData);
                 playerInfoUi.updateInfo(resourceData);
             },
-            (scoreboardData) => { /* Scoreboard Logic */ },
+            (scoreboardData) => { /* Scoreboard Logic */
+            },
             (mapData) => {
                 mapUi.renderMap(mapData);
                 // Wenn wir Sektoren haben, aber die Overworld noch offen ist (beim Start),
-                // umschalten, falls wir gerade erst geclaimt haben? 
+                // umschalten, falls wir gerade erst geclaimt haben?
                 // Für den Moment lassen wir die manuelle Umschaltung via "Stadt betreten"
             },
             (overworldData) => {

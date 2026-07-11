@@ -219,6 +219,56 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                     await manager.send_personal_update(player_id, p_state)
                     await manager.broadcast_scoreboard()
 
+                # ==========================================
+                #   DEVELOPER TOOLS & CHEAT PANEL
+                # ==========================================
+            elif action == "dev_cheat_resources":
+                    p_state = await PlayerState.select_for_update().get(id=player_id)
+
+                    # Maximiert alle Grundressourcen für Testzwecke
+                    p_state.gold += 5000
+                    p_state.wood = min(p_state.max_storage, p_state.wood + 100)
+                    p_state.stone = min(p_state.max_storage, p_state.stone + 100)
+                    p_state.max_population += 20
+                    p_state.free_population += 20
+
+                    await p_state.save()
+                    await manager.send_personal_update(player_id, p_state)
+                    print(f"[DEV] Spieler {player_id} hat Ressourcen gecheatet.")
+
+            elif action == "dev_execute_code":
+                    code_to_eval = data.get("code", "")
+                    print(f"[DEV] Führe Live-Code aus:\n{code_to_eval}")
+
+                    # Lokaler Kontext für die Ausführung von Code-Schnipseln
+                    local_context = {
+                        "PlayerState": PlayerState,
+                        "manager": manager,
+                        "player_id": player_id,
+                        "asyncio": asyncio
+                    }
+
+                    try:
+                        # Führt einzeilige Ausdrücke aus oder fängt mehrzeiligen Code ab
+                        if "\n" not in code_to_eval and not code_to_eval.strip().startswith("await"):
+                            result = eval(code_to_eval, globals(), local_context)
+                            out_msg = f"Ergebnis: {result}"
+                        else:
+                            # Für komplexere Logik / Datenbank-Operationen im Testbetrieb
+                            # Achtung: exec() ist im produktiven Betrieb ein Sicherheitsrisiko!
+                            exec(f"async def _dev_exec():\n" + "".join(
+                                f"    {line}\n" for line in code_to_eval.splitlines()), globals(), local_context)
+                            func = local_context["_dev_exec"]
+                            await func()
+                            out_msg = "Code erfolgreich ausgeführt."
+                    except Exception as e:
+                        out_msg = f"Fehler bei Code-Ausführung: {e}"
+
+                    # Feedback an das Dev-Panel im Frontend senden
+                    await websocket.send_json({
+                        "type": "dev_console_output",
+                        "data": {"message": out_msg}
+                    })
     except WebSocketDisconnect:
         manager.disconnect(websocket, player_id)
         await manager.broadcast_scoreboard()
