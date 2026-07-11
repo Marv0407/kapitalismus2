@@ -15,7 +15,7 @@ async def game_tick_loop():
                     player.gold -= 1
                 await player.save()
 
-                await manager.send_personal_update(player.id, player.gold, player.wood)
+                await manager.send_personal_update(player.id, player)
 
             await manager.broadcast_scoreboard()
         except Exception as e:
