@@ -19,7 +19,8 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
     try:
         player = await PlayerState.get(id=player_id)
     except DoesNotExist:
-        await manager.disconnect(websocket, player_id)
+        manager.disconnect(websocket, player_id)
+        await websocket.close(code=1008)
         return
 
     await manager.broadcast_scoreboard()

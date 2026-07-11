@@ -1,6 +1,6 @@
 let ws = null;
 
-export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate, onMapUpdate, onOverworldUpdate) {
+export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate, onMapUpdate, onOverworldUpdate, onConnectionError) {
     /* Baut die WebSocket-Verbindung auf und registriert die Callback-Funktionen für eingehende Nachrichten. */
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws?player_id=${playerId}`);
@@ -21,8 +21,11 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
         }
     };
 
-    ws.onclose = () => {
-        console.log('Verbindung verloren.');
+    ws.onclose = (event) => {
+        console.log('Verbindung verloren.', event.code);
+        if (event.code === 1008 && onConnectionError) {
+            onConnectionError();
+        }
     };
 }
 

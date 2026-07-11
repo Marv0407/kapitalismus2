@@ -76,6 +76,11 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             (overworldData) => {
                 overworldUi.renderOverworld(overworldData, playerId, claimHexAction);
+            },
+            () => {
+                // Bei Verbindungsfehler/ungültiger ID (z.B. nach DB-Reset) ausloggen
+                localStorage.removeItem('player_id');
+                location.reload();
             }
         );
     }
