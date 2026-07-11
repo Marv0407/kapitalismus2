@@ -50,6 +50,8 @@ class PlayerState(models.Model):
     # Limits
     max_storage = fields.BigIntField(default=100)
 
+    export_settings = fields.JSONField(default=dict)
+
     updated_at = fields.DatetimeField(auto_now=True)
 
     class Meta:
