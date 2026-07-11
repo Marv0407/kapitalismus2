@@ -11,11 +11,8 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
         if (response.type === 'resource_update') {
             onResourceUpdate(response.data);
 
-            // NEU: Ressourcen-Verwaltung & Export-Manager Liste aktualisieren
             const exportList = document.getElementById('export-resource-list');
             if (exportList) {
-                exportList.innerHTML = '';
-
                 const resources = [
                     "wood", "stone", "coal", "iron_ore", "iron", "steel",
                     "seed", "fruit", "vegetable", "livestock", "meat", "grain", "bread",
@@ -24,43 +21,67 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
 
                 const exportSettings = response.data.export_settings || {};
 
-                resources.forEach(res => {
-                    const currentAmount = response.data[res] || 0;
-                    const isChecked = exportSettings[res] ? 'checked' : '';
+                // 1. Wenn die Liste komplett leer ist, bauen wir das Grundgerüst EINMALIG auf
+                if (exportList.children.length === 0) {
+                    resources.forEach(res => {
+                        const currentAmount = response.data[res] || 0;
+                        const isChecked = exportSettings[res] ? 'checked' : '';
 
-                    const row = document.createElement('div');
-                    row.style.display = 'flex';
-                    row.style.justifyContent = 'space-between';
-                    row.style.alignItems = 'center';
-                    row.style.marginBottom = '6px';
-                    row.style.paddingBottom = '4px';
-                    row.style.borderBottom = '1px solid #34495e';
+                        const row = document.createElement('div');
+                        row.id = `export-row-${res}`;
+                        row.style.display = 'flex';
+                        row.style.justifyContent = 'space-between';
+                        row.style.alignItems = 'center';
+                        row.style.marginBottom = '6px';
+                        row.style.paddingBottom = '4px';
+                        row.style.borderBottom = '1px solid #34495e';
 
-                    row.innerHTML = `
-                        <span style="font-family: monospace;">${res}: <strong>${currentAmount}</strong></span>
-                        <label style="cursor: pointer; font-size: 11px;">
-                            <input type="checkbox" class="export-toggle" data-res="${res}" ${isChecked}> Export
-                        </label>
-                    `;
-                    exportList.appendChild(row);
-                });
-
-                // Event-Listener für die Checkboxen registrieren
-                document.querySelectorAll('.export-toggle').forEach(checkbox => {
-                    checkbox.addEventListener('change', (e) => {
-                        const res = e.target.getAttribute('data-res');
-                        const enabled = e.target.checked;
-
-                        ws.send(JSON.stringify({
-                            action: 'toggle_export',
-                            resource: res,
-                            enabled: enabled
-                        }));
+                        row.innerHTML = `
+                            <span style="font-family: monospace;">${res}: <strong class="res-amount">${currentAmount}</strong></span>
+                            <label style="cursor: pointer; font-size: 11px;">
+                                <input type="checkbox" class="export-toggle" data-res="${res}" ${isChecked}> Export
+                            </label>
+                        `;
+                        exportList.appendChild(row);
                     });
-                });
-            }
 
-        } else if (response.type === 'scoreboard_update') {
+                    // Event-Listener NUR EINMALIG binden
+                    exportList.querySelectorAll('.export-toggle').forEach(checkbox => {
+                        checkbox.addEventListener('change', (e) => {
+                            const res = e.target.getAttribute('data-res');
+                            const enabled = e.target.checked;
+
+                            ws.send(JSON.stringify({
+                                action: 'toggle_export',
+                                resource: res,
+                                enabled: enabled
+                            }));
+                        });
+                    });
+                } else {
+                    // 2. Die Liste existiert bereits: Wir aktualisieren NUR die Zahlenwerte und die Checkboxen
+                    resources.forEach(res => {
+
+                        const row = document.getElementById(`export-row-${res}`);
+                        if (row) {
+                            // Textwert updaten
+                            const amountEl = row.querySelector('.res-amount');
+                            if (amountEl) {
+                                amountEl.textContent = response.data[res] || 0;
+                                if (amountEl <= 0) row.style.display = "none"
+                                else row.style.display = "flex"
+
+                            }
+
+                            // Checkbox nur anpassen, wenn der Benutzer gerade nicht interagiert
+                            const checkbox = row.querySelector('.export-toggle');
+                            if (checkbox && document.activeElement !== checkbox) {
+                                checkbox.checked = !!exportSettings[res];
+                            }
+                        }
+                    });
+                }
+            } else if (response.type === 'scoreboard_update') {
             onScoreboardUpdate(response.data);
         } else if (response.type === 'map_update') {
             onMapUpdate(response.data);
@@ -107,7 +128,7 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
                 consoleLog.scrollTop = consoleLog.scrollHeight; // Automatisch nach unten scrollen
             }
         }
-    };
+    }
 
     ws.onclose = (event) => {
         console.log('Verbindung verloren.', event.code);
