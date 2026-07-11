@@ -58,6 +58,8 @@ class PlayerState(models.Model):
 class Region(models.Model):
     id = fields.IntField(pk=True)
     player = fields.ForeignKeyField("models.PlayerState", related_name="regions", null=True)
+    world_hex = fields.ForeignKeyField("models.WorldHex", related_name="local_regions",
+                                       null=True)  # Verknüpfung zum Hexfeld
     coordinates_x = fields.IntField()
     coordinates_y = fields.IntField()
     region_type = fields.CharField(max_length=50)
