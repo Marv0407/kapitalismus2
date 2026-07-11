@@ -81,7 +81,8 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
                         }
                     });
                 }
-            } else if (response.type === 'scoreboard_update') {
+            }
+        } else if (response.type === 'scoreboard_update') {
             onScoreboardUpdate(response.data);
         } else if (response.type === 'map_update') {
             onMapUpdate(response.data);
