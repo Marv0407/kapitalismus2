@@ -223,34 +223,47 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                 await manager.send_personal_update(player_id, p_state)
                 print(f"[DEV] Spieler {player_id} hat Ressourcen gecheatet.")
 
-            elif action == "dev_execute_code":
-                code_to_eval = data.get("code", "")
+elif action == "dev_execute_code":
+code_to_eval = data.get("code", "").strip()
                 print(f"[DEV] Führe Live-Code aus:\n{code_to_eval}")
 
-                # Lokaler Kontext für die Ausführung von Code-Schnipseln
-                local_context = {"PlayerState": PlayerState, "manager": manager, "player_id": player_id,
-                                 "asyncio": asyncio}
+local_context = {
+    "PlayerState": PlayerState,
+    "manager": manager,
+    "player_id": player_id,
+    "asyncio": asyncio
+}
 
                 try:
-                    # Führt einzeilige Ausdrücke aus oder fängt mehrzeiligen Code ab
-                    if "\n" not in code_to_eval and not code_to_eval.strip().startswith("await"):
+                    # 1. Einzeiler ohne 'await' direkt auswerten
+                    if "\n" not in code_to_eval and not code_to_eval.startswith("await"):
                         result = eval(code_to_eval, globals(), local_context)
                         out_msg = f"Ergebnis: {result}"
                     else:
-                        # Für komplexere Logik / Datenbank-Operationen im Testbetrieb
-                        # Achtung: exec() ist im produktiven Betrieb ein Sicherheitsrisiko!
-                        exec(f"async def _dev_exec():\n" + "".join(
-                            f"    {line}\n" for line in code_to_eval.splitlines()), globals(), local_context)
+                        # 2. Mehrzeiliger asynchroner Code sicher verpacken und einrücken
+                        # Jede Zeile wird sauber um 4 Leerzeichen eingerückt, Leerzeilen werden ignoriert
+                        indented_code = "\n".join(f"    {line}" for line in code_to_eval.splitlines() if line.strip())
+                        wrapper_code = f"async def _dev_exec():\n{indented_code}"
+
+                        # Kompilieren und im Kontext registrieren
+                        compiled_code = compile(wrapper_code, "<dev_console>", "exec")
+                        exec(compiled_code, globals(), local_context)
+
+                        # Funktion ausführen
                         func = local_context["_dev_exec"]
                         await func()
                         out_msg = "Code erfolgreich ausgeführt."
+
                 except Exception as e:
+                    # Der alles entscheidende Failsafe: Fehler ausgeben, aber die Schleife NICHT abbrechen!
                     out_msg = f"Fehler bei Code-Ausführung: {e}"
+                    print(f"[DEV - ERROR] Live-Code Fehler: {e}")
 
-                # Feedback an das Dev-Panel im Frontend senden
-                await websocket.send_json({"type": "dev_console_output", "data": {"message": out_msg}})
-
-
+# Feedback an das Dev-Panel senden, Verbindung bleibt durch das 'try-except' stabil
+await websocket.send_json({
+    "type": "dev_console_output",
+    "data": {"message": out_msg}
+})
             elif action == "toggle_export":
                 resource_type = data.get("resource")
                 is_enabled = bool(data.get("enabled", False))
