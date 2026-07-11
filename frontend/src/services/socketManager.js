@@ -10,6 +10,56 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
 
         if (response.type === 'resource_update') {
             onResourceUpdate(response.data);
+
+            // NEU: Ressourcen-Verwaltung & Export-Manager Liste aktualisieren
+            const exportList = document.getElementById('export-resource-list');
+            if (exportList) {
+                exportList.innerHTML = '';
+
+                const resources = [
+                    "wood", "stone", "coal", "iron_ore", "iron", "steel",
+                    "seed", "fruit", "vegetable", "livestock", "meat", "grain", "bread",
+                    "wool", "cotton", "fabric", "clothes"
+                ];
+
+                const exportSettings = response.data.export_settings || {};
+
+                resources.forEach(res => {
+                    const currentAmount = response.data[res] || 0;
+                    const isChecked = exportSettings[res] ? 'checked' : '';
+
+                    const row = document.createElement('div');
+                    row.style.display = 'flex';
+                    row.style.justifyContent = 'space-between';
+                    row.style.alignItems = 'center';
+                    row.style.marginBottom = '6px';
+                    row.style.paddingBottom = '4px';
+                    row.style.borderBottom = '1px solid #34495e';
+
+                    row.innerHTML = `
+                        <span style="font-family: monospace;">${res}: <strong>${currentAmount}</strong></span>
+                        <label style="cursor: pointer; font-size: 11px;">
+                            <input type="checkbox" class="export-toggle" data-res="${res}" ${isChecked}> Export
+                        </label>
+                    `;
+                    exportList.appendChild(row);
+                });
+
+                // Event-Listener für die Checkboxen registrieren
+                document.querySelectorAll('.export-toggle').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const res = e.target.getAttribute('data-res');
+                        const enabled = e.target.checked;
+
+                        ws.send(JSON.stringify({
+                            action: 'toggle_export',
+                            resource: res,
+                            enabled: enabled
+                        }));
+                    });
+                });
+            }
+
         } else if (response.type === 'scoreboard_update') {
             onScoreboardUpdate(response.data);
         } else if (response.type === 'map_update') {
@@ -50,11 +100,7 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
                     });
                 });
             }
-        }
-
-
-
-        else if (response.type === 'dev_console_output') {
+        } else if (response.type === 'dev_console_output') {
             const consoleLog = document.getElementById('dev-console-log');
             if (consoleLog) {
                 consoleLog.textContent = response.data.message;
@@ -79,22 +125,17 @@ export function disconnectWebSocket() {
     }
 }
 
-
 export function devCheatResources() {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: 'dev_cheat_resources' }));
     }
 }
 
-
-
 export function devRunCode(code) {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: 'dev_execute_code', code: code }));
     }
 }
-
-
 
 export function sellWoodAction() {
     /* Sendet die Anforderung zum Holzverkauf an den Server. */
@@ -109,15 +150,26 @@ export function gatherManualAction(resourceType) {
     }
 }
 
-
 export function claimHexAction(q, r) {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'claim_hex', q: q, r: r}))
+        ws.send(JSON.stringify({action: 'claim_hex', q: q, r: r}));
     }
 }
 
 export function assignWorkersAction(buildingId, amount) {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: 'assign_workers', building_id: buildingId, amount: amount }));
+    }
+}
+
+// NEU: Funktion um Gebäude-Bau-Anfragen an den Server zu schicken
+export function buildBuildingAction(regionId, buildingType, terrainType) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            action: 'build_building',
+            region_id: regionId,
+            building_type: buildingType,
+            terrain_type: terrainType
+        }));
     }
 }

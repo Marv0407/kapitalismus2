@@ -2,7 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from tortoise.exceptions import DoesNotExist
 from tortoise.transactions import in_transaction
 from managers.connection_manager import manager
-from models import PlayerState, WorldHex, PlayerBuilding, Region
+from models import PlayerState, WorldHex, PlayerBuilding, Region, MarketPrice
 from world_generator import generate_local_sectors
 
 router = APIRouter()
@@ -269,6 +269,24 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                         "type": "dev_console_output",
                         "data": {"message": out_msg}
                     })
+
+            elif action == "toggle_export":
+                resource_type = data.get("resource")
+                is_enabled = bool(data.get("enabled", False))
+
+                p_state = await PlayerState.select_for_update().get(id=player_id)
+
+                # Initialisiere export_settings falls nicht vorhanden
+                if not isinstance(p_state.export_settings, dict):
+                    p_state.export_settings = {}
+
+                p_state.export_settings[resource_type] = is_enabled
+
+                # update_fields nutzen, um Partial-Model-Fehler zu vermeiden
+                await p_state.save(update_fields=["export_settings"])
+
+                # Bestätigung zurück an den Spieler senden
+                await manager.send_personal_update(player_id, p_state)
     except WebSocketDisconnect:
         manager.disconnect(websocket, player_id)
         await manager.broadcast_scoreboard()
