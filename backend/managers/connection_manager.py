@@ -1,6 +1,6 @@
 from fastapi import WebSocket
 # models! nicht backend.models, weil sonst der pfad ins Leere geht beim server start :P
-from models import PlayerState, Region, WorldHex
+from models import PlayerState, Region, WorldHex, MarketPrice
 
 
 class ConnectionManager:
@@ -130,6 +130,31 @@ class ConnectionManager:
 
             payload = {"type": "overworld_update", "data": map_data}
             for connection in self.active_connections[player_id]:
+                try:
+                    await connection.send_json(payload)
+                except Exception:
+                    pass
+
+    async def broadcast_market_prices(self):
+        """
+        Liest alle aktuellen Marktpreise aus der Datenbank aus und sendet
+        ein gesammeltes Update an alle aktuell verbundenen WebSocket-Clients.
+        """
+        prices = await MarketPrice.all()
+        market_data = {}
+        for p in prices:
+            market_data[p.resource_type] = {
+                "price": round(p.current_price, 2),
+                "stock": p.stock
+            }
+
+        payload = {
+            "type": "market_update",
+            "data": market_data
+        }
+
+        for player_id, connections in self.active_connections.items():
+            for connection in connections:
                 try:
                     await connection.send_json(payload)
                 except Exception:

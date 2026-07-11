@@ -55,5 +55,25 @@ async def game_tick_loop():
 
             await manager.broadcast_scoreboard()
 
+            # --- Wirtschaftssimulation & Preisaktualisierung (alle 15 Sekunden / 3 Ticks) ---
+            if tick_counter % 3 == 0:
+                from models import MarketPrice
+                markets = await MarketPrice.all()
+                prices_changed = False
+
+                for m in markets:
+                    # Das Koenigreich verbraucht langsam ueberschuessige Ressourcen
+                    if m.stock > 1000:
+                        # Baut 5% des Ueberschusses pro Intervall ab
+                        reduction = int((m.stock - 1000) * 0.05) + 1
+                        m.stock -= reduction
+                        m.current_price = m.base_price * (1000 / max(m.stock, 1))
+                        await m.save(update_fields=["stock", "current_price"])
+                        prices_changed = True
+
+                # Preise nur ans Frontend senden, wenn sie sich durch Verkaeufe oder Konsum geaendert haben
+                if prices_changed:
+                    await manager.broadcast_market_prices()
+
         except Exception as e:
             print(f"Fehler im Game-Loop: {e}")

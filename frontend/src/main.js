@@ -69,17 +69,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Listener für DevTools
+
+
         document.getElementById('dev-cheat-btn').addEventListener('click', () => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({action: 'dev_cheat_resources'}));
-            }
+            devCheatResources()
         });
 
         document.getElementById('dev-run-code-btn').addEventListener('click', () => {
             const code = document.getElementById('dev-code-input').value;
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({action: 'dev_execute_code', code: code}));
-            }
+            devRunCode(code);
         });
 
         connectWebSocket(

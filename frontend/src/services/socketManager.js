@@ -18,7 +18,42 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
             onOverworldUpdate(response.data);
         } else if (response.type === 'error') {
             alert(response.message);
+        } else if (response.type === 'market_update') {
+            const marketList = document.getElementById('market-list');
+            if (marketList) {
+                marketList.innerHTML = ''; // Liste leeren
+
+                // Iteriert durch die erhaltenen Marktpreise und baut das UI auf
+                for (const [resource, data] of Object.entries(response.data)) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.style.marginBottom = '5px';
+                    itemDiv.style.display = 'flex';
+                    itemDiv.style.justifyContent = 'space-between';
+
+                    itemDiv.innerHTML = `
+                        <span>${resource}: ${data.price} Gold (Bestand: ${data.stock})</span>
+                        <button class="sell-btn" data-res="${resource}" style="background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer;">10 Verkaufen</button>
+                    `;
+                    marketList.appendChild(itemDiv);
+                }
+
+                // Klick-Listener an die neu generierten Verkaufs-Buttons binden
+                document.querySelectorAll('.sell-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const res = e.target.getAttribute('data-res');
+                        // Sendet den Verkaufsbefehl an das Backend
+                        ws.send(JSON.stringify({
+                            action: 'sell_to_npc',
+                            resource: res,
+                            amount: 10
+                        }));
+                    });
+                });
+            }
         }
+
+
+
         else if (response.type === 'dev_console_output') {
             const consoleLog = document.getElementById('dev-console-log');
             if (consoleLog) {
@@ -43,6 +78,23 @@ export function disconnectWebSocket() {
         ws = null;
     }
 }
+
+
+export function devCheatResources() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'dev_cheat_resources' }));
+    }
+}
+
+
+
+export function devRunCode(code) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'dev_execute_code', code: code }));
+    }
+}
+
+
 
 export function sellWoodAction() {
     /* Sendet die Anforderung zum Holzverkauf an den Server. */
