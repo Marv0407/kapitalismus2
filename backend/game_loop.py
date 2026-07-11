@@ -4,15 +4,13 @@ from managers.connection_manager import manager
 
 
 async def game_tick_loop():
-    """Zentraler Loop, der zyklisch Ressourcen generiert und Kosten abzieht."""
+    """Zentraler Loop, der gerade nix tut."""
     while True:
         await asyncio.sleep(5.0)
         try:
             players = await PlayerState.all()
             for player in players:
-                player.wood += 2
-                if player.wood > 50 and player.gold > 0:
-                    player.gold -= 1
+                print("Online Players:" + str(player))
                 await player.save()
 
                 await manager.send_personal_update(player.id, player)
