@@ -116,10 +116,18 @@ async def game_tick_loop():
                         print(f"[DEBUG - LOOP] Spieler {p_state.id} nach Export in DB gespeichert.")
                 # 2. Konsum des Königreichs (Märkte regenerieren sich langsam)
                 for m in markets:
-                    if m.stock > 1000:
-                        reduction = int((m.stock - 1000) * 0.05) + 1
-                        m.stock -= reduction
+                    if m.stock > 0:
+                        # Baut 5% des aktuellen Bestands ab, mindestens aber 1 Einheit pro Intervall
+                        reduction = int(m.stock * 0.05) + 1
+                        m.stock = max(0, m.stock - reduction)
+
+                        # Preisberechnung: Je näher der Bestand an 0 rückt, desto höher schießt der Preis
                         m.current_price = m.base_price * (1000 / max(m.stock, 1))
+
+                        # Deckelung des Maximalpreises (z. B. maximal das 10-fache des Basispreises),
+                        # damit der Preis bei 0 Einheiten nicht unendlich hoch wird.
+                        m.current_price = min(m.current_price, m.base_price * 10)
+
                         await m.save(update_fields=["stock", "current_price"])
                         prices_changed = True
 
