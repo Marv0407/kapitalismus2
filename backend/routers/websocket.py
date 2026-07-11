@@ -1,8 +1,8 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from tortoise.exceptions import DoesNotExist
-from tortoise.transactions import in_transaction
 from managers.connection_manager import manager
 from models import PlayerState, WorldHex, PlayerBuilding, Region, MarketPrice
+from tortoise.exceptions import DoesNotExist
+from tortoise.transactions import in_transaction
 from world_generator import generate_local_sectors
 
 router = APIRouter()
@@ -39,12 +39,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                     p_state = await PlayerState.select_for_update().get(id=player_id)
 
                     total_resources = (
-                        p_state.wood + p_state.stone + p_state.coal + p_state.iron_ore +
-                        p_state.iron + p_state.steel + p_state.seed + p_state.fruit +
-                        p_state.vegetable + p_state.livestock + p_state.meat +
-                        p_state.grain + p_state.bread + p_state.wool + p_state.cotton +
-                        p_state.fabric + p_state.clothes
-                    )
+                        p_state.wood + p_state.stone + p_state.coal + p_state.iron_ore + p_state.iron + p_state.steel + p_state.seed + p_state.fruit + p_state.vegetable + p_state.livestock + p_state.meat + p_state.grain + p_state.bread + p_state.wool + p_state.cotton + p_state.fabric + p_state.clothes)
 
                     if total_resources < p_state.max_storage:
                         resource_type = data.get("resource")
@@ -97,7 +92,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
 
             elif action == "assign_workers":
                 building_id = data.get("building_id")
-                amount = data.get("amount", 1) # +1 oder -1
+                amount = data.get("amount", 1)  # +1 oder -1
 
                 async with in_transaction():
                     building = await PlayerBuilding.select_for_update().get_or_none(id=building_id, player_id=player_id)
@@ -107,17 +102,18 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                         current_workers = building.data.get("workers", 0)
                         max_workers = building.data.get("max_workers", 5)
 
-                        if amount > 0: # Zuweisen
+                        if amount > 0:  # Zuweisen
                             if p_state.free_population >= amount and current_workers + amount <= max_workers:
                                 building.data["workers"] = current_workers + amount
                                 p_state.free_population -= amount
                             else:
-                                await websocket.send_json({"type": "error", "message": "Nicht genug freie Einwohner oder Limit erreicht!"})
+                                await websocket.send_json(
+                                    {"type": "error", "message": "Nicht genug freie Einwohner oder Limit erreicht!"})
                                 continue
-                        else: # Abziehen
+                        else:  # Abziehen
                             if current_workers + amount >= 0:
                                 building.data["workers"] = current_workers + amount
-                                p_state.free_population -= amount # amount ist negativ, also +|amount|
+                                p_state.free_population -= amount  # amount ist negativ, also +|amount|
                             else:
                                 continue
 
@@ -132,11 +128,8 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                 region_id = int(data.get("region_id"))  # Die ID der geklickten lokalen Grid-Kachel
                 b_type = data.get("building_type")  # 'holzfaeller', 'steingrube', 'wohnhaus'
 
-                costs = {
-                    "holzfaeller": {"wood": 20, "stone": 5},
-                    "steingrube": {"wood": 30, "stone": 10},
-                    "wohnhaus": {"wood": 25, "stone": 15}
-                }
+                costs = {"holzfaeller": {"wood": 20, "stone": 5}, "steingrube": {"wood": 30, "stone": 10},
+                         "wohnhaus": {"wood": 25, "stone": 15}}
 
                 if b_type not in costs:
                     continue
@@ -174,11 +167,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                     await p_state.save(update_fields=["wood", "stone", "max_population", "free_population"])
 
                     # Speichern der Effizienz im bestehenden JSONField
-                    await PlayerBuilding.create(
-                        player=p_state,
-                        region=region,
-                        building_type=b_type,
-                        level=1,
+                    await PlayerBuilding.create(player=p_state, region=region, building_type=b_type, level=1,
                         data={"workers": 0, "efficiency": eff}  # Setzt beide Werte initial fest
                     )
 
@@ -219,74 +208,79 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                     await manager.send_personal_update(player_id, p_state)
                     await manager.broadcast_scoreboard()
 
-                # ==========================================
-                #   DEVELOPER TOOLS & CHEAT PANEL
-                # ==========================================
+                # ==========================================  #   DEVELOPER TOOLS & CHEAT PANEL  # ==========================================
             elif action == "dev_cheat_resources":
-                    p_state = await PlayerState.select_for_update().get(id=player_id)
+                p_state = await PlayerState.select_for_update().get(id=player_id)
 
-                    # Maximiert alle Grundressourcen für Testzwecke
-                    p_state.gold += 5000
-                    p_state.wood = min(p_state.max_storage, p_state.wood + 100)
-                    p_state.stone = min(p_state.max_storage, p_state.stone + 100)
-                    p_state.max_population += 20
-                    p_state.free_population += 20
+                # Maximiert alle Grundressourcen für Testzwecke
+                p_state.gold += 5000
+                p_state.wood = min(p_state.max_storage, p_state.wood + 100)
+                p_state.stone = min(p_state.max_storage, p_state.stone + 100)
+                p_state.max_population += 20
+                p_state.free_population += 20
 
-                    await p_state.save()
-                    await manager.send_personal_update(player_id, p_state)
-                    print(f"[DEV] Spieler {player_id} hat Ressourcen gecheatet.")
+                await p_state.save()
+                await manager.send_personal_update(player_id, p_state)
+                print(f"[DEV] Spieler {player_id} hat Ressourcen gecheatet.")
 
             elif action == "dev_execute_code":
-                    code_to_eval = data.get("code", "")
-                    print(f"[DEV] Führe Live-Code aus:\n{code_to_eval}")
+                code_to_eval = data.get("code", "")
+                print(f"[DEV] Führe Live-Code aus:\n{code_to_eval}")
 
-                    # Lokaler Kontext für die Ausführung von Code-Schnipseln
-                    local_context = {
-                        "PlayerState": PlayerState,
-                        "manager": manager,
-                        "player_id": player_id,
-                        "asyncio": asyncio
-                    }
+                # Lokaler Kontext für die Ausführung von Code-Schnipseln
+                local_context = {"PlayerState": PlayerState, "manager": manager, "player_id": player_id,
+                                 "asyncio": asyncio}
 
-                    try:
-                        # Führt einzeilige Ausdrücke aus oder fängt mehrzeiligen Code ab
-                        if "\n" not in code_to_eval and not code_to_eval.strip().startswith("await"):
-                            result = eval(code_to_eval, globals(), local_context)
-                            out_msg = f"Ergebnis: {result}"
-                        else:
-                            # Für komplexere Logik / Datenbank-Operationen im Testbetrieb
-                            # Achtung: exec() ist im produktiven Betrieb ein Sicherheitsrisiko!
-                            exec(f"async def _dev_exec():\n" + "".join(
-                                f"    {line}\n" for line in code_to_eval.splitlines()), globals(), local_context)
-                            func = local_context["_dev_exec"]
-                            await func()
-                            out_msg = "Code erfolgreich ausgeführt."
-                    except Exception as e:
-                        out_msg = f"Fehler bei Code-Ausführung: {e}"
+                try:
+                    # Führt einzeilige Ausdrücke aus oder fängt mehrzeiligen Code ab
+                    if "\n" not in code_to_eval and not code_to_eval.strip().startswith("await"):
+                        result = eval(code_to_eval, globals(), local_context)
+                        out_msg = f"Ergebnis: {result}"
+                    else:
+                        # Für komplexere Logik / Datenbank-Operationen im Testbetrieb
+                        # Achtung: exec() ist im produktiven Betrieb ein Sicherheitsrisiko!
+                        exec(f"async def _dev_exec():\n" + "".join(
+                            f"    {line}\n" for line in code_to_eval.splitlines()), globals(), local_context)
+                        func = local_context["_dev_exec"]
+                        await func()
+                        out_msg = "Code erfolgreich ausgeführt."
+                except Exception as e:
+                    out_msg = f"Fehler bei Code-Ausführung: {e}"
 
-                    # Feedback an das Dev-Panel im Frontend senden
-                    await websocket.send_json({
-                        "type": "dev_console_output",
-                        "data": {"message": out_msg}
-                    })
+                # Feedback an das Dev-Panel im Frontend senden
+                await websocket.send_json({"type": "dev_console_output", "data": {"message": out_msg}})
+
 
             elif action == "toggle_export":
                 resource_type = data.get("resource")
                 is_enabled = bool(data.get("enabled", False))
 
+                print(
+                    f"[DEBUG - WS] toggle_export empfangen: Spieler={player_id}, Ressource={resource_type}, Status={is_enabled}")
+
                 p_state = await PlayerState.select_for_update().get(id=player_id)
 
-                # Initialisiere export_settings falls nicht vorhanden
                 if not isinstance(p_state.export_settings, dict):
+                    print(f"[DEBUG - WS] export_settings war kein dict, initialisiere neu.")
                     p_state.export_settings = {}
 
                 p_state.export_settings[resource_type] = is_enabled
-
-                # update_fields nutzen, um Partial-Model-Fehler zu vermeiden
                 await p_state.save(update_fields=["export_settings"])
 
-                # Bestätigung zurück an den Spieler senden
+                print(f"[DEBUG - WS] export_settings erfolgreich gespeichert: {p_state.export_settings}")
                 await manager.send_personal_update(player_id, p_state)
+
+            elif action == "sell_to_npc":
+                resource_type = data.get("resource")
+                amount = int(data.get("amount", 0))
+
+                print(
+                    f"[DEBUG - WS] sell_to_npc empfangen: Spieler={player_id}, Ressource={resource_type}, Menge={amount}")
+
+                if amount <= 0:
+                    print(f"[DEBUG - WS] Abbruch: Menge <= 0")
+                    continue
+
     except WebSocketDisconnect:
         manager.disconnect(websocket, player_id)
         await manager.broadcast_scoreboard()

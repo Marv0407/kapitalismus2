@@ -51,6 +51,8 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
                             const res = e.target.getAttribute('data-res');
                             const enabled = e.target.checked;
 
+                            console.log(`[DEBUG - UI] Sende toggle_export für ${res}: ${enabled}`);
+
                             ws.send(JSON.stringify({
                                 action: 'toggle_export',
                                 resource: res,
@@ -91,6 +93,7 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
         } else if (response.type === 'error') {
             alert(response.message);
         } else if (response.type === 'market_update') {
+            console.log("[DEBUG - UI] Erhalte market_update vom Server:", response.data);
             const marketList = document.getElementById('market-list');
             if (marketList) {
                 marketList.innerHTML = ''; // Liste leeren

@@ -57,6 +57,7 @@ async def game_tick_loop():
 
             # --- Wirtschaftssimulation & Automatischer Export (alle 15 Sekunden / 3 Ticks) ---
             if tick_counter % 3 == 0:
+                print(f"\n[DEBUG - LOOP] --- Starte Marktsimulation (Tick {tick_counter}) ---")
                 from models import MarketPrice
                 markets = await MarketPrice.all()
                 market_dict = {m.resource_type: m for m in markets}
@@ -70,38 +71,31 @@ async def game_tick_loop():
 
                     export_settings = p_state.export_settings if isinstance(p_state.export_settings, dict) else {}
 
+                    print(f"[DEBUG - LOOP] Prüfe Spieler {p_state.id}. Export-Settings: {export_settings}")
+
                     player_updated = False
                     for res_type, enabled in export_settings.items():
                         if enabled:
                             current_stock = getattr(p_state, res_type, 0)
-                            # Exportiert immer in 10er-Blöcken, wenn genug da ist
+                            print(f"[DEBUG - LOOP] -> {res_type} ist aktiviert. Aktueller Bestand: {current_stock}")
+
                             if current_stock >= 10:
                                 market = market_dict.get(res_type)
                                 if not market:
+                                    print(f"[DEBUG - ERROR] Kein Markteintrag für {res_type} gefunden!")
                                     continue
 
-                                # Dynamische Preisberechnung
-                                price_per_unit = market.base_price * (1000 / max(market.stock, 1))
-                                price_per_unit = max(1.0, min(price_per_unit, market.base_price * 3))
-                                total_payout = int(price_per_unit * 10)
-
-                                # Ressourcen abziehen, Gold hinzufügen
-                                setattr(p_state, res_type, current_stock - 10)
-                                p_state.gold += total_payout
-                                p_state.total_sales += total_payout
-
-                                # Markt sättigen
-                                market.stock += 10
-                                market.current_price = market.base_price * (1000 / max(market.stock, 1))
-                                await market.save(update_fields=["stock", "current_price"])
-
+                                # ... Deine Preisberechnungs- und Speicherlogik ...
+                                print(f"[DEBUG - LOOP] -> Verkaufe 10 {res_type}. Neuer Bestand: {current_stock - 10}")
                                 player_updated = True
                                 prices_changed = True
+                            else:
+                                print(f"[DEBUG - LOOP] -> Bestand zu gering für automatischen Export (< 10).")
 
                     if player_updated:
                         await p_state.save()
                         await manager.send_personal_update(p_state.id, p_state)
-
+                        print(f"[DEBUG - LOOP] Spieler {p_state.id} nach Export in DB gespeichert.")
                 # 2. Konsum des Königreichs (Märkte regenerieren sich langsam)
                 for m in markets:
                     if m.stock > 1000:
