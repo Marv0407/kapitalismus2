@@ -97,6 +97,7 @@ class ConnectionManager:
                     "y": r.coordinates_y,
                     "type": r.region_type,
                     "building": building.building_type if building else None,
+                    "building_id": building.id if building else None,
                     "level": building.level if building else 0,
                     "building_data": building.data if building else {}
                 })
