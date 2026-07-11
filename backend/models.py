@@ -92,7 +92,7 @@ class MarketPrice(models.Model):
     resource_type = fields.CharField(max_length=50, unique=True)
     base_price = fields.FloatField()
     current_price = fields.FloatField()
-    stock = fields.BigIntField(default=1000)
+    stock = fields.BigIntField(default=0)
 
     class Meta:
         table = "market_prices"
