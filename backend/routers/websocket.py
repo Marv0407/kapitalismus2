@@ -4,6 +4,7 @@ from models import PlayerState, WorldHex, PlayerBuilding, Region, MarketPrice
 from tortoise.exceptions import DoesNotExist
 from tortoise.transactions import in_transaction
 from world_generator import generate_local_sectors
+import asyncio
 
 router = APIRouter()
 
