@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById("toggle-dev-btn").addEventListener("click", () => {
             const devToolsPanel = document.getElementById("dev-tools-panel");
-            devToolsPanel.classList.remove("hidden");
+            devToolsPanel.classList.toggle("hidden");
         })
 
         // Event Listener für Custom Events aus Komponenten
