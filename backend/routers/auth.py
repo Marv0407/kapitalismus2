@@ -1,3 +1,4 @@
+import random
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from models import User, PlayerState, Region, PlayerBuilding
@@ -17,8 +18,19 @@ async def register(data: AuthModel):
     if existing_user:
         raise HTTPException(status_code=400, detail="Benutzername bereits vergeben")
 
+    # Zufällige Spielerfarbe generieren
+    random_color = "#{:06x}".format(random.randint(0, 0xFFFFFF))
+
     user = await User.create(username=data.username, password_hash=data.password)
-    player = await PlayerState.create(user=user, gold=100, wood=0)
+    player = await PlayerState.create(
+        user=user, 
+        gold=100, 
+        wood=0, 
+        color=random_color,
+        population=5,
+        max_population=10,
+        free_population=5
+    )
 
     return {"status": "success", "player_id": player.id}
 

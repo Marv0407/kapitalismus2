@@ -3,7 +3,7 @@ import { PlayerInfo } from './components/PlayerInfo.js';
 import { ScoreBoard } from './components/ScoreBoard.js'; // (Optional später in die UI einbauen)
 import { SectorGrid } from './components/SectorGrid.js';
 import { OverworldMap } from "./components/OverworldMap.js";
-import { connectWebSocket, disconnectWebSocket, gatherManualAction, claimHexAction } from './services/socketManager.js';
+import { connectWebSocket, disconnectWebSocket, gatherManualAction, claimHexAction, assignWorkersAction } from './services/socketManager.js';
 import { registerUser, loginUser } from './services/api.js';
 
 customElements.define('top-bar', TopBar);
@@ -14,7 +14,7 @@ customElements.define('overworld-map', OverworldMap);
 document.addEventListener('DOMContentLoaded', () => {
     const scoreboardUi = document.getElementById('scoreboard-ui');
     const logoutBtn = document.getElementById('logout-btn');
-    const gameLayoutLeft = document.getElementById('game-layout-left');
+    const worldBtn = document.getElementById('world-btn');
 
     const authTitle = document.getElementById('auth-title');
     const errorMsg = document.getElementById('error-msg');
@@ -37,9 +37,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const overworldUi = document.getElementById("overworld-ui");
         const mapUi = document.getElementById('map-ui');
 
-        // Button Listener für manuelles Sammeln
+        // Button Listener
         document.getElementById('gather-wood-btn').addEventListener('click', () => gatherManualAction('wood'));
         document.getElementById('gather-stone-btn').addEventListener('click', () => gatherManualAction('stone'));
+        document.getElementById('world-btn').addEventListener('click', () => {
+            overworldUi.classList.remove('hidden');
+            mapUi.classList.add('hidden');
+        });
+
+        // Event Listener für Custom Events aus Komponenten
+        overworldUi.addEventListener('view-city', () => {
+            overworldUi.classList.add('hidden');
+            mapUi.classList.remove('hidden');
+        });
+
+        mapUi.addEventListener('assign-workers', (e) => {
+            assignWorkersAction(e.detail.building_id, e.detail.amount);
+        });
 
         document.getElementById('logout-btn').addEventListener('click', () => {
             localStorage.removeItem('player_id');
@@ -53,13 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 topBarUi.updateResources(resourceData);
                 playerInfoUi.updateInfo(resourceData);
             },
-            (scoreboardData) => { /* Aktuell ausgeblendet, Platz für später */ },
+            (scoreboardData) => { /* Scoreboard Logic */ },
             (mapData) => {
-                if (mapData.length > 0) {
-                    overworldUi.classList.add('hidden');
-                    mapUi.classList.remove('hidden');
-                    mapUi.renderMap(mapData);
-                }
+                mapUi.renderMap(mapData);
+                // Wenn wir Sektoren haben, aber die Overworld noch offen ist (beim Start),
+                // umschalten, falls wir gerade erst geclaimt haben? 
+                // Für den Moment lassen wir die manuelle Umschaltung via "Stadt betreten"
             },
             (overworldData) => {
                 overworldUi.renderOverworld(overworldData, playerId, claimHexAction);

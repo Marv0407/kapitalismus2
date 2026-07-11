@@ -46,6 +46,9 @@ export class TopBar extends HTMLElement {
                 </div>
 
                 <div class="res storage">Lager: <span id="storage-val">0 / 100</span></div>
+                <div class="res" style="color: #3498db; font-weight: bold; margin-left: 15px; border-left: 1px solid #444; padding-left: 15px;">
+                    Einwohner: <span id="pop-val">0</span> / <span id="pop-max-val">0</span> (<span id="pop-free-val">0</span> frei)
+                </div>
             </div>
         `;
     }
@@ -71,5 +74,12 @@ export class TopBar extends HTMLElement {
         const storageEl = this.shadowRoot.getElementById('storage-val');
         storageEl.textContent = `${totalResources} / ${data.max_storage}`;
         storageEl.style.color = totalResources >= data.max_storage ? '#e74c3c' : '#2ecc71';
+
+        // Bevölkerung aktualisieren
+        if (data.population !== undefined) {
+            this.shadowRoot.getElementById('pop-val').textContent = data.population;
+            this.shadowRoot.getElementById('pop-max-val').textContent = data.max_population;
+            this.shadowRoot.getElementById('pop-free-val').textContent = data.free_population;
+        }
     }
 }

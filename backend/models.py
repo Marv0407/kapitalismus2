@@ -13,9 +13,17 @@ class PlayerState(models.Model):
     id = fields.IntField(pk=True)
     user = fields.OneToOneField("models.User", related_name="player_state")
 
+    # Personalisierung
+    color = fields.CharField(max_length=7, default="#eb720f") # Hex-Farbe
+
     # Währungen und Metriken
     gold = fields.BigIntField(default=50)
-    total_sales = fields.BigIntField(default=0)  # Speichert den kumulierten Umsatz für Steuerklassen
+    total_sales = fields.BigIntField(default=0)
+
+    # Bevölkerung
+    population = fields.IntField(default=0)
+    max_population = fields.IntField(default=0)
+    free_population = fields.IntField(default=0)
 
     # Ressourcen
     wood = fields.BigIntField(default=0)

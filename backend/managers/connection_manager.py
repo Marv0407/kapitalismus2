@@ -29,6 +29,10 @@ class ConnectionManager:
                 "data": {
                     "gold": p_state.gold,
                     "total_sales": p_state.total_sales,
+                    "color": p_state.color,
+                    "population": p_state.population,
+                    "max_population": p_state.max_population,
+                    "free_population": p_state.free_population,
                     "wood": p_state.wood,
                     "stone": p_state.stone,
                     "coal": p_state.coal,
@@ -88,12 +92,13 @@ class ConnectionManager:
             for r in regions:
                 building = r.buildings[0] if r.buildings else None
                 map_data.append({
+                    "id": r.id,
                     "x": r.coordinates_x,
                     "y": r.coordinates_y,
                     "type": r.region_type,
                     "building": building.building_type if building else None,
                     "level": building.level if building else 0,
-                    # Module wie gebäudeverbesserungen, slots werden mit level freigeschaltet oderso
+                    "building_data": building.data if building else {}
                 })
 
             payload = {"type": "map_update", "data": map_data}
@@ -115,7 +120,9 @@ class ConnectionManager:
                     "q": h.q,
                     "r": h.r,
                     "terrain": h.terrain,
-                    "owner_id": h.owner.id if h.owner else None
+                    "owner_id": h.owner.id if h.owner else None,
+                    "owner_name": h.owner.user.username if h.owner else None,
+                    "owner_color": h.owner.color if h.owner else None
                 })
 
             payload = {"type": "overworld_update", "data": map_data}

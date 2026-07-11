@@ -51,5 +51,10 @@ async def generate_local_sectors(player, base_terrain: str):
         region=center_region,
         building_type="holzfäller",
         level=1,
-        data={"efficiency": 1.0}
+        data={
+            "efficiency": 1.0,
+            "workers": 0,
+            "max_workers": 5,
+            "priority": 1
+        }
     )

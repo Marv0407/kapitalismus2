@@ -16,6 +16,8 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
             onMapUpdate(response.data);
         } else if (response.type === 'overworld_update') {
             onOverworldUpdate(response.data);
+        } else if (response.type === 'error') {
+            alert(response.message);
         }
     };
 
@@ -48,5 +50,11 @@ export function gatherManualAction(resourceType) {
 export function claimHexAction(q, r) {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: 'claim_hex', q: q, r: r}))
+    }
+}
+
+export function assignWorkersAction(buildingId, amount) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'assign_workers', building_id: buildingId, amount: amount }));
     }
 }
