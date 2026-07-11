@@ -223,16 +223,16 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                 await manager.send_personal_update(player_id, p_state)
                 print(f"[DEV] Spieler {player_id} hat Ressourcen gecheatet.")
 
-elif action == "dev_execute_code":
-code_to_eval = data.get("code", "").strip()
+            elif action == "dev_execute_code":
+                code_to_eval = data.get("code", "").strip()
                 print(f"[DEV] Führe Live-Code aus:\n{code_to_eval}")
 
-local_context = {
-    "PlayerState": PlayerState,
-    "manager": manager,
-    "player_id": player_id,
-    "asyncio": asyncio
-}
+                local_context = {
+                    "PlayerState": PlayerState,
+                    "manager": manager,
+                    "player_id": player_id,
+                    "asyncio": asyncio
+                }
 
                 try:
                     # 1. Einzeiler ohne 'await' direkt auswerten
@@ -259,11 +259,11 @@ local_context = {
                     out_msg = f"Fehler bei Code-Ausführung: {e}"
                     print(f"[DEV - ERROR] Live-Code Fehler: {e}")
 
-# Feedback an das Dev-Panel senden, Verbindung bleibt durch das 'try-except' stabil
-await websocket.send_json({
-    "type": "dev_console_output",
-    "data": {"message": out_msg}
-})
+                # Feedback an das Dev-Panel senden, Verbindung bleibt durch das 'try-except' stabil
+                await websocket.send_json({
+                    "type": "dev_console_output",
+                    "data": {"message": out_msg}
+                })
             elif action == "toggle_export":
                 resource_type = data.get("resource")
                 is_enabled = bool(data.get("enabled", False))
