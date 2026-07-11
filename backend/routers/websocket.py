@@ -1,4 +1,5 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from tortoise.exceptions import DoesNotExist
 from managers.connection_manager import manager
 from models import PlayerState, WorldHex
 from world_generator import generate_local_sectors
@@ -8,15 +9,24 @@ router = APIRouter()
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, player_id: int):
-    """Verwaltet den Lebenszyklus und die eingehenden Nachrichten einer WebSocket-Verbindung."""
+    """
+        Verwaltet den Lebenszyklus und die eingehenden Nachrichten einer WebSocket-Verbindung.
+        Prueft die Existenz des Spielers, bevor die Verbindung vollstaendig geoeffnet wird.
+        """
     await manager.connect(websocket, player_id)
+
+    try:
+        player = await PlayerState.get(id=player_id)
+    except DoesNotExist:
+        # Schliesst die Verbindung mit Code 1008 (Policy Violation), falls der Datensatz fehlt
+        await manager.disconnect(websocket, player_id)
+        return
+
     await manager.broadcast_scoreboard()
     await manager.send_overworld_map(player_id)
     await manager.send_map_update(player_id)
 
     try:
-        player = await PlayerState.get(id=player_id)
-        # Sende initialen State über den Manager
         await manager.send_personal_update(player_id, player)
 
         while True:
