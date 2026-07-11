@@ -7,7 +7,9 @@ import {
     claimHexAction,
     connectWebSocket,
     disconnectWebSocket,
-    gatherManualAction
+    gatherManualAction,
+    devCheatResources,
+    devRunCode
 } from './services/socketManager.js';
 import {loginUser, registerUser} from './services/api.js';
 
