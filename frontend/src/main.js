@@ -1,12 +1,13 @@
-import { ResourceDisplay } from './components/ResourceDisplay.js';
-import { ScoreBoard } from './components/ScoreBoard.js';
+import { TopBar } from './components/TopBar.js';
+import { PlayerInfo } from './components/PlayerInfo.js';
+import { ScoreBoard } from './components/ScoreBoard.js'; // (Optional später in die UI einbauen)
 import { SectorGrid } from './components/SectorGrid.js';
-import { connectWebSocket, disconnectWebSocket, sellWoodAction, claimHexAction } from './services/socketManager.js';
-import { registerUser, loginUser } from './services/api.js';
 import { OverworldMap } from "./components/OverworldMap.js";
+import { connectWebSocket, disconnectWebSocket, gatherManualAction, claimHexAction } from './services/socketManager.js';
+import { registerUser, loginUser } from './services/api.js';
 
-customElements.define('resource-display', ResourceDisplay);
-customElements.define('score-board', ScoreBoard);
+customElements.define('top-bar', TopBar);
+customElements.define('player-info', PlayerInfo);
 customElements.define('sector-grid', SectorGrid);
 customElements.define('overworld-map', OverworldMap);
 
@@ -25,35 +26,34 @@ document.addEventListener('DOMContentLoaded', () => {
     let isLoginMode = true;
 
     function initGameSession() {
-        /* Prüft die Session und initialisiert bei Erfolg die Game-Komponenten. */
         const playerId = localStorage.getItem('player_id');
-        if (!playerId) {
-            document.getElementById('auth-view').classList.remove('hidden');
-            document.getElementById('game-view').classList.add('hidden');
-            return;
-        }
+        if (!playerId) { return; }
 
         document.getElementById('auth-view').classList.add('hidden');
         document.getElementById('game-view').classList.remove('hidden');
 
-        gameLayoutLeft.innerHTML = `
-            <resource-display id="economy-ui"></resource-display>
-            <overworld-map id="overworld-ui"></overworld-map>
-            <sector-grid id="map-ui" class="hidden"></sector-grid>
-            <button id="sell-btn" style="margin-top: 20px;">10 Holz für 5 Gold an NPC verkaufen</button>
-        `;
-
-        const ui = document.getElementById("economy-ui");
+        const topBarUi = document.getElementById("top-bar-ui");
+        const playerInfoUi = document.getElementById("player-info-ui");
         const overworldUi = document.getElementById("overworld-ui");
         const mapUi = document.getElementById('map-ui');
 
-        /* Bindet den Klick-Event-Listener an den dynamisch neu erstellten Button */
-        document.getElementById('sell-btn').addEventListener('click', sellWoodAction);
+        // Button Listener für manuelles Sammeln
+        document.getElementById('gather-wood-btn').addEventListener('click', () => gatherManualAction('wood'));
+        document.getElementById('gather-stone-btn').addEventListener('click', () => gatherManualAction('stone'));
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('player_id');
+            disconnectWebSocket();
+            location.reload();
+        });
 
         connectWebSocket(
             playerId,
-            (gold, wood) => ui.updateValues(gold, wood),
-            (data) => scoreboardUi.renderData(data),
+            (resourceData) => {
+                topBarUi.updateResources(resourceData);
+                playerInfoUi.updateInfo(resourceData);
+            },
+            (scoreboardData) => { /* Aktuell ausgeblendet, Platz für später */ },
             (mapData) => {
                 if (mapData.length > 0) {
                     overworldUi.classList.add('hidden');

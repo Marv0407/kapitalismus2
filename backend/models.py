@@ -12,8 +12,36 @@ class User(models.Model):
 class PlayerState(models.Model):
     id = fields.IntField(pk=True)
     user = fields.OneToOneField("models.User", related_name="player_state")
-    gold = fields.BigIntField(default=100)
+
+    # Währungen und Metriken
+    gold = fields.BigIntField(default=50)
+    total_sales = fields.BigIntField(default=0)  # Speichert den kumulierten Umsatz für Steuerklassen
+
+    # Ressourcen
     wood = fields.BigIntField(default=0)
+    stone = fields.BigIntField(default=0)
+    coal = fields.BigIntField(default=0)
+    iron_ore = fields.BigIntField(default=0)
+    iron = fields.BigIntField(default=0)
+    steel = fields.BigIntField(default=0)
+
+    seed = fields.BigIntField(default=0)
+    fruit = fields.BigIntField(default=0)
+    vegetable = fields.BigIntField(default=0)
+    livestock = fields.BigIntField(default=0)
+    meat = fields.BigIntField(default=0)
+    grain = fields.BigIntField(default=0)
+    bread = fields.BigIntField(default=0)
+
+    wool = fields.BigIntField(default=0)
+    cotton = fields.BigIntField(default=0)
+    fabric = fields.BigIntField(default=0)
+    clothes = fields.BigIntField(default=0)
+
+
+    # Limits
+    max_storage = fields.BigIntField(default=100)
+
     updated_at = fields.DatetimeField(auto_now=True)
 
     class Meta:

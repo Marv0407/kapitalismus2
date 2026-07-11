@@ -21,16 +21,39 @@ class ConnectionManager:
             if not self.active_connections[player_id]:
                 del self.active_connections[player_id]
 
-    async def send_personal_update(self, player_id: int, gold: int, wood: int):
-        """Sendet ein Ressourcen-Update an alle aktiven Verbindungen eines spezifischen Spielers."""
+    async def send_personal_update(self, player_id: int, p_state):
+        """Sendet den kompletten, aktualisierten Ressourcen-Status inklusive aller neuen Materialien an den Spieler."""
         if player_id in self.active_connections:
-            payload = {"type": "resource_update", "data": {"gold": gold, "wood": wood}}
+            payload = {
+                "type": "resource_update",
+                "data": {
+                    "gold": p_state.gold,
+                    "total_sales": p_state.total_sales,
+                    "wood": p_state.wood,
+                    "stone": p_state.stone,
+                    "coal": p_state.coal,
+                    "iron_ore": p_state.iron_ore,
+                    "iron": p_state.iron,
+                    "steel": p_state.steel,
+                    "seed": p_state.seed,
+                    "fruit": p_state.fruit,
+                    "vegetable": p_state.vegetable,
+                    "livestock": p_state.livestock,
+                    "meat": p_state.meat,
+                    "grain": p_state.grain,
+                    "bread": p_state.bread,
+                    "wool": p_state.wool,
+                    "cotton": p_state.cotton,
+                    "fabric": p_state.fabric,
+                    "clothes": p_state.clothes,
+                    "max_storage": p_state.max_storage
+                }
+            }
             for connection in self.active_connections[player_id]:
                 try:
                     await connection.send_json(payload)
                 except Exception:
                     pass
-
     async def broadcast_scoreboard(self):
         """Ermittelt den aktuellen Goldstand aller Spieler und sendet die Rangliste an alle verbundenen Clients."""
         try:

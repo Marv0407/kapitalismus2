@@ -9,7 +9,7 @@ export function connectWebSocket(playerId, onResourceUpdate, onScoreboardUpdate,
         const response = JSON.parse(event.data);
 
         if (response.type === 'resource_update') {
-            onResourceUpdate(response.data.gold, response.data.wood);
+            onResourceUpdate(response.data);
         } else if (response.type === 'scoreboard_update') {
             onScoreboardUpdate(response.data);
         } else if (response.type === 'map_update') {
@@ -36,6 +36,12 @@ export function sellWoodAction() {
     /* Sendet die Anforderung zum Holzverkauf an den Server. */
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: 'sell_wood' }));
+    }
+}
+
+export function gatherManualAction(resourceType) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'gather_manual', resource: resourceType }));
     }
 }
 
