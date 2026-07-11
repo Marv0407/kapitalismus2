@@ -85,3 +85,13 @@ class WorldHex(models.Model):
 
     class Meta:
         table = "world_hexes"
+
+class MarketPrice(models.Model):
+    id = fields.IntField(pk=True)
+    resource_type = fields.CharField(max_length=50, unique=True)
+    base_price = fields.FloatField()
+    current_price = fields.FloatField()
+    stock = fields.BigIntField(default=1000)
+
+    class Meta:
+        table = "market_prices"

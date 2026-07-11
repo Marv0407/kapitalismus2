@@ -37,7 +37,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
             if action == "gather_manual":
                 async with in_transaction():
                     p_state = await PlayerState.select_for_update().get(id=player_id)
-                    
+
                     total_resources = (
                         p_state.wood + p_state.stone + p_state.coal + p_state.iron_ore +
                         p_state.iron + p_state.steel + p_state.seed + p_state.fruit +
@@ -70,13 +70,13 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
             elif action == "claim_hex":
                 q = data.get("q")
                 r = data.get("r")
-                
+
                 async with in_transaction():
                     p_state = await PlayerState.select_for_update().get(id=player_id)
                     existing_cities = await WorldHex.filter(owner=p_state).count()
-                    
+
                     cost = 0 if existing_cities == 0 else 1000
-                    
+
                     if p_state.gold < cost:
                         await websocket.send_json({"type": "error", "message": f"Nicht genug Gold! Kosten: {cost} G"})
                         continue
@@ -85,7 +85,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                     if hex_field:
                         p_state.gold -= cost
                         await p_state.save()
-                        
+
                         hex_field.owner = p_state
                         await hex_field.save()
 
@@ -98,15 +98,15 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
             elif action == "assign_workers":
                 building_id = data.get("building_id")
                 amount = data.get("amount", 1) # +1 oder -1
-                
+
                 async with in_transaction():
                     building = await PlayerBuilding.select_for_update().get_or_none(id=building_id, player_id=player_id)
                     p_state = await PlayerState.select_for_update().get(id=player_id)
-                    
+
                     if building and p_state:
                         current_workers = building.data.get("workers", 0)
                         max_workers = building.data.get("max_workers", 5)
-                        
+
                         if amount > 0: # Zuweisen
                             if p_state.free_population >= amount and current_workers + amount <= max_workers:
                                 building.data["workers"] = current_workers + amount
@@ -120,12 +120,104 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                                 p_state.free_population -= amount # amount ist negativ, also +|amount|
                             else:
                                 continue
-                                
+
                         await building.save()
                         await p_state.save()
-                        
+
                         await manager.send_map_update(player_id)
                         await manager.send_personal_update(player_id, p_state)
+
+            # --- Gebäude bauen ---
+            elif action == "build_building":
+                region_id = int(data.get("region_id"))  # Die ID der geklickten lokalen Grid-Kachel
+                b_type = data.get("building_type")  # 'holzfaeller', 'steingrube', 'wohnhaus'
+
+                costs = {
+                    "holzfaeller": {"wood": 20, "stone": 5},
+                    "steingrube": {"wood": 30, "stone": 10},
+                    "wohnhaus": {"wood": 25, "stone": 15}
+                }
+
+                if b_type not in costs:
+                    continue
+
+                p_state = await PlayerState.select_for_update().get(id=player_id)
+
+                # Validierung: Gehört die Region/Kachel wirklich dem Spieler?
+                region = await Region.get_or_none(id=region_id, player=p_state)
+                if not region:
+                    continue
+
+                # Validierung: Ist die Kachel bereits bebaut?
+                already_built = await PlayerBuilding.filter(region=region).exists()
+                if already_built:
+                    continue
+
+                # Validierung: Ressourcenprüfung im Backend
+                req = costs[b_type]
+                if p_state.wood >= req["wood"] and p_state.stone >= req["stone"]:
+                    p_state.wood -= req["wood"]
+                    p_state.stone -= req["stone"]
+
+                    # Biom-Effizienz ermitteln
+                    eff = 1.0
+                    if b_type == "holzfaeller" and region.region_type == "Wald":
+                        eff = 1.5
+                    elif b_type == "steingrube" and region.region_type == "Gebirge":
+                        eff = 1.5
+
+                    # Wohnhaus-Effekt: Erhöht das Bevölkerungslimit
+                    if b_type == "wohnhaus":
+                        p_state.max_population += 5
+                        p_state.free_population += 5
+
+                    await p_state.save(update_fields=["wood", "stone", "max_population", "free_population"])
+
+                    # Speichern der Effizienz im bestehenden JSONField
+                    await PlayerBuilding.create(
+                        player=p_state,
+                        region=region,
+                        building_type=b_type,
+                        level=1,
+                        data={"workers": 0, "efficiency": eff}  # Setzt beide Werte initial fest
+                    )
+
+                    await manager.send_personal_update(player_id, p_state)
+                    await manager.send_map_update(player_id)
+
+            # --- Ressourcen an fahrende Händler (NPC) verkaufen ---
+            elif action == "sell_to_npc":
+                resource_type = data.get("resource")
+                amount = int(data.get("amount", 0))
+
+                if amount <= 0:
+                    continue
+
+                p_state = await PlayerState.select_for_update().get(id=player_id)
+                current_stock = getattr(p_state, resource_type, 0)
+
+                if current_stock >= amount:
+                    market = await MarketPrice.select_for_update().get_or_none(resource_type=resource_type)
+                    if not market:
+                        continue
+
+                    # Dynamischer Preis-Algorithmus
+                    price_per_unit = market.base_price * (1000 / max(market.stock, 1))
+                    price_per_unit = max(1.0, min(price_per_unit, market.base_price * 3))
+
+                    total_payout = int(price_per_unit * amount)
+
+                    setattr(p_state, resource_type, current_stock - amount)
+                    p_state.gold += total_payout
+                    p_state.total_sales += total_payout
+                    await p_state.save(update_fields=[resource_type, "gold", "total_sales"])
+
+                    market.stock += amount
+                    market.current_price = market.base_price * (1000 / max(market.stock, 1))
+                    await market.save(update_fields=["stock", "current_price"])
+
+                    await manager.send_personal_update(player_id, p_state)
+                    await manager.broadcast_scoreboard()
 
     except WebSocketDisconnect:
         manager.disconnect(websocket, player_id)
