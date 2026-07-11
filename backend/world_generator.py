@@ -45,7 +45,12 @@ async def generate_local_sectors(player, base_terrain: str):
 
     await Region.bulk_create(regions)
 
-    center_region = await Region.get(player=player, coordinates_x=0, coordinates_y=0)
+    center_region = await Region.filter(
+        player=player,
+        coordinates_x=0,
+        coordinates_y=0
+    ).order_by("-id").first()
+
     await PlayerBuilding.create(
         player=player,
         region=center_region,
