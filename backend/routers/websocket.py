@@ -5,6 +5,7 @@ from tortoise.exceptions import DoesNotExist
 from tortoise.transactions import in_transaction
 from world_generator import generate_local_sectors
 import asyncio
+from backend import config
 
 router = APIRouter()
 
@@ -126,50 +127,52 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
 
             # --- Gebäude bauen ---
             elif action == "build_building":
-                region_id = int(data.get("region_id"))  # Die ID der geklickten lokalen Grid-Kachel
-                b_type = data.get("building_type")  # 'holzfaeller', 'steingrube', 'wohnhaus'
+                region_id = int(data.get("region_id"))
+                b_type = data.get("building_type")
 
-                costs = {"holzfaeller": {"wood": 20, "stone": 5}, "steingrube": {"wood": 30, "stone": 10},
-                         "wohnhaus": {"wood": 25, "stone": 15}}
-
-                if b_type not in costs:
+                if b_type not in config.BUILDING_COSTS:
                     continue
 
                 p_state = await PlayerState.select_for_update().get(id=player_id)
-
-                # Validierung: Gehört die Region/Kachel wirklich dem Spieler?
                 region = await Region.get_or_none(id=region_id, player=p_state)
+
                 if not region:
                     continue
 
-                # Validierung: Ist die Kachel bereits bebaut?
                 already_built = await PlayerBuilding.filter(region=region).exists()
                 if already_built:
                     continue
 
-                # Validierung: Ressourcenprüfung im Backend
-                req = costs[b_type]
-                if p_state.wood >= req["wood"] and p_state.stone >= req["stone"]:
-                    p_state.wood -= req["wood"]
-                    p_state.stone -= req["stone"]
+                req = config.BUILDING_COSTS[b_type]
+                if p_state.wood >= req.get("wood", 0) and p_state.stone >= req.get("stone", 0):
+                    p_state.wood -= req.get("wood", 0)
+                    p_state.stone -= req.get("stone", 0)
 
-                    # Biom-Effizienz ermitteln
                     eff = 1.0
-                    if b_type == "holzfaeller" and region.region_type == "Wald":
-                        eff = 1.5
-                    elif b_type == "steingrube" and region.region_type == "Gebirge":
-                        eff = 1.5
+                    if b_type == "holzfäller" and region.region_type == config.BUILDING_EFFICIENCY["holzfäller_biome"]:
+                        eff = config.BUILDING_EFFICIENCY["bonus_multiplier"]
+                    elif b_type == "steinbruch" and region.region_type == config.BUILDING_EFFICIENCY[
+                        "steinbruch_biome"]:
+                        eff = config.BUILDING_EFFICIENCY["bonus_multiplier"]
 
-                    # Wohnhaus-Effekt: Erhöht das Bevölkerungslimit
                     if b_type == "wohnhaus":
-                        p_state.max_population += 5
-                        p_state.free_population += 5
+                        p_state.max_population += config.POPULATION_SETTINGS["wohnhaus_max_pop"]
+                        p_state.free_population += config.POPULATION_SETTINGS["wohnhaus_start_pop"]
+                        p_state.population += config.POPULATION_SETTINGS["wohnhaus_start_pop"]
 
-                    await p_state.save(update_fields=["wood", "stone", "max_population", "free_population"])
+                    if b_type == "lagerhaus":
+                        p_state.max_storage += config.STORAGE_SETTINGS["lagerhaus_capacity"]
 
-                    # Speichern der Effizienz im bestehenden JSONField
-                    await PlayerBuilding.create(player=p_state, region=region, building_type=b_type, level=1,
-                        data={"workers": 0, "efficiency": eff}  # Setzt beide Werte initial fest
+                    await p_state.save(
+                        update_fields=["wood", "stone", "max_population", "free_population", "population",
+                                       "max_storage"])
+
+                    await PlayerBuilding.create(
+                        player=p_state,
+                        region=region,
+                        building_type=b_type,
+                        level=1,
+                        data={"workers": 0, "efficiency": eff}
                     )
 
                     await manager.send_personal_update(player_id, p_state)
@@ -294,6 +297,65 @@ async def websocket_endpoint(websocket: WebSocket, player_id: int):
                 if amount <= 0:
                     print(f"[DEBUG - WS] Abbruch: Menge <= 0")
                     continue
+
+
+            elif action == "build_building":
+                region_id = int(data.get("region_id"))
+                b_type = data.get("building_type")
+
+                costs = {
+                    "holzfäller": {"wood": 20, "stone": 5},
+                    "steinbruch": {"wood": 30, "stone": 10},
+                    "wohnhaus": {"wood": 25, "stone": 15},
+                    "lagerhaus": {"wood": 50, "stone": 30}
+                }
+
+                if b_type not in costs:
+                    continue
+
+                p_state = await PlayerState.select_for_update().get(id=player_id)
+                region = await Region.get_or_none(id=region_id, player=p_state)
+
+                if not region:
+                    continue
+
+                already_built = await PlayerBuilding.filter(region=region).exists()
+                if already_built:
+                    continue
+
+                req = costs[b_type]
+                if p_state.wood >= req["wood"] and p_state.stone >= req["stone"]:
+                    p_state.wood -= req["wood"]
+                    p_state.stone -= req["stone"]
+
+                    eff = 1.0
+                    if b_type == "holzfäller" and region.region_type == "Wald":
+                        eff = 1.5
+                    elif b_type == "steinbruch" and region.region_type == "Gebirge":
+                        eff = 1.5
+
+                    if b_type == "wohnhaus":
+                        p_state.max_population += 5
+                        p_state.free_population += 2
+                        p_state.population += 2
+
+                    if b_type == "lagerhaus":
+                        p_state.max_storage += 250
+
+                    await p_state.save(
+                        update_fields=["wood", "stone", "max_population", "free_population", "population",
+                                       "max_storage"])
+
+                    await PlayerBuilding.create(
+                        player=p_state,
+                        region=region,
+                        building_type=b_type,
+                        level=1,
+                        data={"workers": 0, "efficiency": eff}
+                    )
+
+                    await manager.send_personal_update(player_id, p_state)
+                    await manager.send_map_update(player_id)
 
     except WebSocketDisconnect:
         manager.disconnect(websocket, player_id)

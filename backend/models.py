@@ -25,6 +25,9 @@ class PlayerState(models.Model):
     max_population = fields.IntField(default=0)
     free_population = fields.IntField(default=0)
 
+    happiness = fields.IntField(default=50)
+    tax_rate = fields.IntField(default=1)
+
     # Ressourcen
     wood = fields.BigIntField(default=0)
     stone = fields.BigIntField(default=0)

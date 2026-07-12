@@ -1,7 +1,10 @@
 import asyncio
+
 from tortoise.transactions import in_transaction
-from models import PlayerState, PlayerBuilding
+
+from backend import config
 from managers.connection_manager import manager
+from models import PlayerState, PlayerBuilding
 
 
 async def game_tick_loop():
@@ -57,25 +60,24 @@ async def game_tick_loop():
 
             # --- Wirtschaftssimulation & Automatischer Export (alle 15 Sekunden / 3 Ticks) ---
             if tick_counter % 3 == 0:
-                print(f"\n[DEBUG - LOOP] --- Starte Marktsimulation (Tick {tick_counter}) ---")
                 from models import MarketPrice
                 markets = await MarketPrice.all()
-                market_dict = {m.resource_type: m for m in markets}
-                prices_changed = False
 
-                # Failsafe: Falls die Datenbank leer ist, Markt sofort aufbauen
                 if not markets:
-                    print("[DEBUG - LOOP] Markt ist leer! Initialisiere Standardpreise...")
                     resources = [
                         "wood", "stone", "coal", "iron_ore", "iron", "steel",
                         "seed", "fruit", "vegetable", "livestock", "meat", "grain", "bread",
                         "wool", "cotton", "fabric", "clothes"
                     ]
-                    price_list = []
-                    for res in resources:
-                        price_list.append(MarketPrice(resource_type=res, base_price=4.0, current_price=4.0, stock=1000))
+                    price_list = [
+                        MarketPrice(
+                            resource_type=res,
+                            base_price=config.MARKET_SETTINGS["initial_base_price"],
+                            current_price=config.MARKET_SETTINGS["initial_base_price"],
+                            stock=config.MARKET_SETTINGS["initial_stock"]
+                        ) for res in resources
+                    ]
                     await MarketPrice.bulk_create(price_list)
-                    # Märkte direkt nach Erstellung neu laden
                     markets = await MarketPrice.all()
 
                 market_dict = {m.resource_type: m for m in markets}
@@ -117,22 +119,49 @@ async def game_tick_loop():
                 # 2. Konsum des Königreichs (Märkte regenerieren sich langsam)
                 for m in markets:
                     if m.stock > 0:
-                        # Baut 5% des aktuellen Bestands ab, mindestens aber 1 Einheit pro Intervall
-                        reduction = int(m.stock * 0.05) + 1
+                        reduction = int(m.stock * config.MARKET_SETTINGS["consumption_rate"]) + 1
                         m.stock = max(0, m.stock - reduction)
+                        # Baut 5% des aktuellen Bestands ab, mindestens aber 1 Einheit pro Intervall
 
                         # Preisberechnung: Je näher der Bestand an 0 rückt, desto höher schießt der Preis
-                        m.current_price = m.base_price * (1000 / max(m.stock, 1))
+                        m.current_price = m.base_price * (config.MARKET_SETTINGS["initial_stock"] / max(m.stock, 1))
 
                         # Deckelung des Maximalpreises (z. B. maximal das 10-fache des Basispreises),
                         # damit der Preis bei 0 Einheiten nicht unendlich hoch wird.
-                        m.current_price = min(m.current_price, m.base_price * 10)
+                        m.current_price = min(m.current_price,
+                                              m.base_price * config.MARKET_SETTINGS["max_price_multiplier"])
 
                         await m.save(update_fields=["stock", "current_price"])
                         prices_changed = True
 
                 if prices_changed:
                     await manager.broadcast_market_prices()
+
+                    # --- Bevoelkerungswachstum, Steuern und Erhaltungskosten (alle 60 Sekunden / 12 Ticks) ---
+            if tick_counter % 12 == 0:
+                maintenance_cost = sum(config.BUILDING_MAINTENANCE.get(b.building_type, 0) for b in buildings)
+
+                tax_income = p_state.population * p_state.tax_rate
+                p_state.gold = max(0, p_state.gold + tax_income - maintenance_cost)
+
+                if p_state.tax_rate == 0:
+                    p_state.happiness = min(100,
+                                            p_state.happiness + config.POPULATION_SETTINGS["tax_happiness_bonus_0"])
+                elif p_state.tax_rate == 1:
+                    p_state.happiness = min(100,
+                                            p_state.happiness + config.POPULATION_SETTINGS["tax_happiness_bonus_1"])
+                elif p_state.tax_rate > 1:
+                    penalty = p_state.tax_rate * config.POPULATION_SETTINGS["tax_happiness_penalty_multiplier"]
+                    p_state.happiness = max(0, p_state.happiness - penalty)
+
+                if p_state.happiness > config.POPULATION_SETTINGS[
+                    "happiness_migration_high"] and p_state.population < p_state.max_population:
+                    p_state.population += 1
+                    p_state.free_population += 1
+                elif p_state.happiness < config.POPULATION_SETTINGS[
+                    "happiness_migration_low"] and p_state.free_population > 0:
+                    p_state.population -= 1
+                    p_state.free_population -= 1
 
         except Exception as e:
             print(f"Fehler im Game-Loop: {e}")
