@@ -5,7 +5,7 @@ from tortoise.exceptions import DoesNotExist
 from tortoise.transactions import in_transaction
 from world_generator import generate_local_sectors
 import asyncio
-from backend import config
+import config
 
 router = APIRouter()
 
