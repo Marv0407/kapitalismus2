@@ -5,6 +5,7 @@ from tortoise.transactions import in_transaction
 from backend import config
 from managers.connection_manager import manager
 from models import PlayerState, PlayerBuilding
+from config import *
 
 
 async def game_tick_loop():
